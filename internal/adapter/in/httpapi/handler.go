@@ -16,9 +16,17 @@ type healthResponse struct {
 // (cross-cutting.md §4); every other route is wrapped by the
 // default-deny middleware added in step 3.
 func NewRouter() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", handleHealth)
-	return mux
+	// placeholder route so the 401 test has something to hit; real
+	// product routes arrive with HU-PRO-01
+	protected := http.NewServeMux()
+	protected.HandleFunc("GET /api/v1/products", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotImplemented)
+	})
+
+	root := http.NewServeMux()
+	root.HandleFunc("GET /health", handleHealth)
+	root.Handle("/api/v1/", requireAuth(protected))
+	return root
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
