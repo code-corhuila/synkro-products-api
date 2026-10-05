@@ -37,7 +37,7 @@ jobs:
       - name: Architecture check — domain imports nothing but the standard library
         run: |
           set -e
-          violations=$(go list -deps ./internal/domain/... | grep -v '^github.com/code-corhuila/synkro-products-api' | grep '\.' || true)
+          violations=$(go list -deps -f '{{if not .Standard}}{{.ImportPath}}{{end}}' ./internal/domain/... | grep -v '^github.com/code-corhuila/synkro-products-api' || true)
           if [ -n "$violations" ]; then
             echo "internal/domain imports outside the standard library:"
             echo "$violations"
