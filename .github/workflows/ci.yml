@@ -23,6 +23,19 @@ jobs:
 
   build-test-and-architecture-check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci_admin_pw
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: ci_admin_pw
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -32,7 +45,7 @@ jobs:
         run: go build ./...
       - name: Vet
         run: go vet ./...
-      - name: Test
+      - name: Unit and HTTP tests (integration tests skip without TEST_DATABASE_URL)
         run: go test ./...
       - name: Architecture check — domain imports nothing but the standard library
         run: |
@@ -44,3 +57,42 @@ jobs:
             exit 1
           fi
           echo "Architecture check passed: domain has no external imports."
+
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Simulate bootstrap — create the products_app login role
+        # Same stand-in synkro-products-db's db-ci.yml uses: the real
+        # bootstrap lives in synkro-infra-postgres (ADR-012 Decision 1).
+        # CI only — not how production bootstrap works.
+        run: |
+          psql -h localhost -U postgres -c \
+            "CREATE ROLE products_app LOGIN PASSWORD 'ci_app_pw';"
+
+      - name: Migrate — synkro-products-db's migrations (vendored in test/products-db)
+        # synkro-products-db is private, so this workflow's GITHUB_TOKEN
+        # cannot check it out; test/products-db/SOURCE_COMMIT records the
+        # commit the copy was taken from.
+        env:
+          FLYWAY_URL: jdbc:postgresql://localhost:5432/postgres
+          FLYWAY_USER: postgres
+          FLYWAY_PASSWORD: ci_admin_pw
+        run: |
+          scripts/migrate-test-db.sh
+          # A missing location makes Flyway "succeed" with zero migrations,
+          # so success alone proves nothing: count them.
+          expected=$(find test/products-db -name 'V*.sql' | wc -l)
+          applied=$(psql -h localhost -U postgres -d postgres -tAc \
+            "SELECT count(*) FROM flyway_schema_history WHERE success AND version IS NOT NULL;")
+          echo "V migrations vendored: $expected, applied: $applied"
+          if [ "$expected" -eq 0 ] || [ "$applied" != "$expected" ]; then
+            echo "Applied migrations do not match test/products-db"
+            exit 1
+          fi
+
+      - name: Integration tests — real PostgreSQL, as products_app
+        # Connecting as products_app (not postgres) proves the adapter
+        # needs nothing beyond V003's grants.
+        env:
+          TEST_DATABASE_URL: postgres://products_app:ci_app_pw@localhost:5432/postgres?sslmode=disable
+        run: go test -count=1 -v ./internal/adapter/out/persistence/
