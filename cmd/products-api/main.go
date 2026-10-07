@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/code-corhuila/synkro-products-api/internal/adapter/in/httpapi"
 	"github.com/code-corhuila/synkro-products-api/internal/adapter/out/persistence"
@@ -21,12 +23,29 @@ func newID() string { return uuid.Must(uuid.NewV7()).String() }
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
-	cfg := config.Load()
 
-	mem := persistence.NewMemory()
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("invalid configuration", "error", err)
+		os.Exit(1)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err == nil {
+		err = pool.Ping(ctx)
+	}
+	cancel()
+	if err != nil {
+		logger.Error("cannot reach the database", "error", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	db := persistence.NewPostgres(pool)
 	router := httpapi.NewRouter(
-		usecase.NewProductService(mem.Products(), mem.Categories(), newID),
-		usecase.NewCategoryService(mem.Categories(), newID),
+		usecase.NewProductService(db.Products(), db.Categories(), newID),
+		usecase.NewCategoryService(db.Categories(), newID),
 	)
 
 	srv := &http.Server{
