@@ -31,10 +31,9 @@ func traceIDFrom(r *http.Request) string {
 
 // requireAuth is a deliberately minimal default-deny gate: it rejects
 // every request that lacks a well-formed Authorization header. It does
-// NOT validate a real RS256 signature yet — that lands with the first
-// story that needs an authenticated route to actually succeed
-// (HU-PRO-01). Its only job here is to make sure nothing is reachable
-// by accident.
+// NOT validate a real RS256 signature: any JWT-shaped Bearer token gets
+// through. Its only job is to make sure nothing is reachable by
+// accident.
 func requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
