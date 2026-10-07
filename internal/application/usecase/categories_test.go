@@ -176,11 +176,7 @@ func TestRenameCategory_EmptyNameIsRejected(t *testing.T) {
 // write; the repository then reports the database's verdict.
 func TestRenameCategory_DuplicateReportedByTheRepositoryIsStillA422(t *testing.T) {
 	cs := &racingCategories{fakeCategories: newFakeCategories(activeCat)}
-	_, err := newCategoryService(cs.fakeCategories).RenameCategory(context.Background(), activeCat.ID, in.RenameCategoryCommand{Name: "Audio"})
-	if err != nil {
-		t.Fatalf("setup: %v", err)
-	}
-	_, err = NewCategoryService(cs, sequentialIDs("cat")).RenameCategory(context.Background(), activeCat.ID, in.RenameCategoryCommand{Name: "Video"})
+	_, err := NewCategoryService(cs, sequentialIDs("cat")).RenameCategory(context.Background(), activeCat.ID, in.RenameCategoryCommand{Name: "Video"})
 	if !errors.Is(err, in.ErrCategoryNameTaken) {
 		t.Fatalf("expected ErrCategoryNameTaken, got %v", err)
 	}
