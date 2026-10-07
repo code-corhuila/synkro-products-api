@@ -1,0 +1,3 @@
+CREATE INDEX idx_stock_adjustment_product_id ON products_schema.stock_adjustment (product_id);
+CREATE INDEX idx_stock_reservation_line_reservation_id ON products_schema.stock_reservation_line (reservation_id);
+CREATE INDEX idx_stock_reservation_line_product_id ON products_schema.stock_reservation_line (product_id);

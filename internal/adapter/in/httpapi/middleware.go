@@ -1,36 +1,44 @@
 package httpapi
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
 )
 
-type errorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
-	TraceID string `json:"traceId"`
-}
+type traceIDKey struct{}
 
-// requireAuth is a deliberately minimal default-deny gate: it rejects
-// every request that lacks a well-formed Authorization header. It does
-// NOT validate a real RS256 signature yet — that lands with the first
-// story that needs an authenticated route to actually succeed
-// (HU-PRO-01). Its only job here is to make sure nothing is reachable
-// by accident.
-func requireAuth(next http.Handler) http.Handler {
+// withCorrelation reuses the caller's X-Correlation-Id or generates one,
+// returns it on every response and makes it available as the traceId of
+// any error envelope (cross-cutting.md).
+func withCorrelation(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		traceID := r.Header.Get("X-Correlation-Id")
 		if traceID == "" {
 			traceID = uuid.NewString()
 		}
 		w.Header().Set("X-Correlation-Id", traceID)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), traceIDKey{}, traceID)))
+	})
+}
 
+func traceIDFrom(r *http.Request) string {
+	id, _ := r.Context().Value(traceIDKey{}).(string)
+	return id
+}
+
+// requireAuth is a deliberately minimal default-deny gate: it rejects
+// every request that lacks a well-formed Authorization header. It does
+// NOT validate a real RS256 signature: any JWT-shaped Bearer token gets
+// through. Its only job is to make sure nothing is reachable by
+// accident.
+func requireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok || !looksLikeJWT(token) {
-			writeUnauthorized(w, traceID)
+			writeError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "a valid Authorization header is required")
 			return
 		}
 		// A real token still gets no further validation in this story —
@@ -53,14 +61,4 @@ func looksLikeJWT(token string) bool {
 		}
 	}
 	return true
-}
-
-func writeUnauthorized(w http.ResponseWriter, traceID string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusUnauthorized)
-	json.NewEncoder(w).Encode(errorResponse{
-		Error:   "UNAUTHORIZED",
-		Message: "a valid Authorization header is required",
-		TraceID: traceID,
-	})
 }
