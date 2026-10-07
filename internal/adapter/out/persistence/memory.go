@@ -51,12 +51,18 @@ func (m *Memory) Categories() out.CategoryRepository { return memoryCategories{m
 
 // SeedProduct stores p as-is, stock included. Stock has no write path in
 // this story (it arrives with HU-PRO-09), so tests that need a non-zero
-// stock put it here.
+// stock put it here. Overwriting an existing product keeps its place in
+// the newest-first order.
 func (m *Memory) SeedProduct(p model.Product) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.seq++
-	m.products[p.ID] = memRow[model.Product]{p, m.seq}
+	row, ok := m.products[p.ID]
+	if !ok {
+		m.seq++
+		row.seq = m.seq
+	}
+	row.v = p
+	m.products[p.ID] = row
 }
 
 // claimKey must be called with mu held. It reports the id already stored
