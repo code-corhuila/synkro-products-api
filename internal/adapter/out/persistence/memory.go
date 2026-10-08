@@ -21,6 +21,9 @@ type Memory struct {
 	products   map[string]memRow[model.Product]
 	categories map[string]memRow[model.Category]
 	keys       map[string]memKey
+
+	adjustments  map[string]model.StockAdjustment
+	reservations map[string]model.StockReservation
 }
 
 type memRow[T any] struct {
@@ -34,15 +37,19 @@ type memKey struct {
 }
 
 const (
-	resourceProduct  = "PRODUCT"
-	resourceCategory = "CATEGORY"
+	resourceProduct     = "PRODUCT"
+	resourceCategory    = "CATEGORY"
+	resourceAdjustment  = "STOCK_ADJUSTMENT"
+	resourceReservation = "STOCK_RESERVATION"
 )
 
 func NewMemory() *Memory {
 	return &Memory{
-		products:   map[string]memRow[model.Product]{},
-		categories: map[string]memRow[model.Category]{},
-		keys:       map[string]memKey{},
+		products:     map[string]memRow[model.Product]{},
+		categories:   map[string]memRow[model.Category]{},
+		keys:         map[string]memKey{},
+		adjustments:  map[string]model.StockAdjustment{},
+		reservations: map[string]model.StockReservation{},
 	}
 }
 
