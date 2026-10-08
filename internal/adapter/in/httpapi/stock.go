@@ -11,7 +11,12 @@ import (
 	"github.com/code-corhuila/synkro-products-api/internal/domain/model"
 )
 
-const reasonMax = 255
+const (
+	reasonMax = 255
+	// stock, delta and quantity are INTEGER columns: anything wider would
+	// reach the database as an overflow error, i.e. a 500.
+	maxInt32 = 1<<31 - 1
+)
 
 // ─── Stock adjustments ─────────────────────────────────────────────────
 
@@ -52,8 +57,8 @@ func (h stockHandlers) createAdjustment(w http.ResponseWriter, r *http.Request) 
 	if bodyDetails := decodeBody(r, &req); bodyDetails != nil {
 		details = append(details, bodyDetails...)
 	} else {
-		if req.Delta == nil || *req.Delta == 0 {
-			details = append(details, errorDetail{Field: "delta", Message: "required, a non-zero integer"})
+		if req.Delta == nil || *req.Delta == 0 || *req.Delta > maxInt32 || *req.Delta < -maxInt32 {
+			details = append(details, errorDetail{Field: "delta", Message: "required, a non-zero 32-bit integer"})
 		}
 		switch {
 		case req.Reason == nil || strings.TrimSpace(*req.Reason) == "":
@@ -141,8 +146,8 @@ func readLines(r *http.Request) (lines []in.ReservationLineCommand, details []er
 			id = cid
 			seen[cid] = true
 		}
-		if l.Quantity == nil || *l.Quantity < 1 {
-			details = append(details, errorDetail{Field: field("quantity"), Message: "required, an integer of 1 or more"})
+		if l.Quantity == nil || *l.Quantity < 1 || *l.Quantity > maxInt32 {
+			details = append(details, errorDetail{Field: field("quantity"), Message: "required, an integer from 1 to 2147483647"})
 			continue
 		}
 		lines = append(lines, in.ReservationLineCommand{ProductID: id, Quantity: *l.Quantity})
