@@ -92,6 +92,9 @@ func TestPostgres_StockAdjustment_AppliesPositiveAndNegativeDeltas(t *testing.T)
 	if got.ID != a1.ID || got.ProductID != p.ID || got.Delta != 5 || got.Reason != "recount" || got.AdjustedBy != a1.AdjustedBy || got.AdjustedAt.IsZero() {
 		t.Errorf("adjustment: %+v", got)
 	}
+	if got.StockAfter == nil || *got.StockAfter != 15 {
+		t.Errorf("StockAfter %v, want 15", got.StockAfter)
+	}
 
 	_, current, _, err = db.StockAdjustments().CreateOnce(ctxT(), newKey(), newAdjustment(t, p.ID, -15))
 	if err != nil || current != 0 || stockOf(t, pool, p.ID) != 0 {
@@ -149,8 +152,9 @@ func TestPostgres_StockAdjustment_ReplayReturnsTheOriginalAndAppliesNothingAgain
 	if created || again.ID != first.ID || again.Delta != -4 || !again.AdjustedAt.Equal(first.AdjustedAt) {
 		t.Errorf("replay: created=%v %+v, want the original %+v", created, again, first)
 	}
-	if current != 1 || stockOf(t, pool, p.ID) != 1 {
-		t.Errorf("replay changed stock: current=%d stored=%d, want 1", current, stockOf(t, pool, p.ID))
+	// currentStock is what this adjustment left (10-4), not the 1 now in the product.
+	if current != 6 || stockOf(t, pool, p.ID) != 1 {
+		t.Errorf("replay: current=%d stored=%d, want 6 and 1 (nothing re-applied)", current, stockOf(t, pool, p.ID))
 	}
 	if n := adjustmentRows(t, pool, p.ID); n != 1 {
 		t.Errorf("%d adjustment rows, want 1", n)
@@ -388,5 +392,76 @@ func TestPostgres_StockReservation_UnknownOrMalformedIDIsNotFound(t *testing.T) 
 		if _, err := db.StockReservations().Release(ctxT(), id); !errors.Is(err, out.ErrNotFound) {
 			t.Errorf("Release(%s): got %v", id, err)
 		}
+	}
+}
+
+// The point of stock_after: a replay answers with the stock THIS adjustment
+// left, however much the product has moved since (another adjustment, a
+// reservation) — "the same resource", not a fresh reading.
+func TestPostgres_StockAdjustment_ReplayReturnsTheStockRecordedAtAdjustmentTime(t *testing.T) {
+	pool := openDB(t)
+	db := NewPostgres(pool)
+	p := stockedProduct(t, db, pool, 10)
+	key := newKey()
+
+	first, current, created, err := db.StockAdjustments().CreateOnce(ctxT(), key, newAdjustment(t, p.ID, -4))
+	if err != nil || !created || current != 6 {
+		t.Fatalf("first: current=%d created=%v err=%v", current, created, err)
+	}
+	if n := count(t, pool, `SELECT stock_after FROM products_schema.stock_adjustment WHERE adjustment_id = $1`, first.ID); n != 6 {
+		t.Fatalf("stock_after column holds %d, want 6", n)
+	}
+
+	// The product moves on: another adjustment, then a reservation.
+	if _, cur, _, err := db.StockAdjustments().CreateOnce(ctxT(), newKey(), newAdjustment(t, p.ID, 20)); err != nil || cur != 26 {
+		t.Fatalf("second adjustment: current=%d err=%v", cur, err)
+	}
+	if _, _, err := db.StockReservations().CreateOnce(ctxT(), newKey(), newReservation(t, want(p.ID, 3))); err != nil {
+		t.Fatal(err)
+	}
+	if got := stockOf(t, pool, p.ID); got != 23 {
+		t.Fatalf("setup: product stock %d, want 23", got)
+	}
+
+	again, current, created, err := db.StockAdjustments().CreateOnce(ctxT(), key, newAdjustment(t, p.ID, -1))
+	if err != nil || created {
+		t.Fatalf("replay: created=%v err=%v", created, err)
+	}
+	if current != 6 {
+		t.Errorf("replay currentStock %d, want 6 (recorded at adjustment time), not the product's 23 now", current)
+	}
+	if again.StockAfter == nil || *again.StockAfter != 6 {
+		t.Errorf("replay StockAfter %v, want 6", again.StockAfter)
+	}
+}
+
+// The one backward-compatibility case: an adjustment written before V017
+// has stock_after NULL, and its replay can only fall back to the
+// product's stock now.
+func TestPostgres_StockAdjustment_ReplayOfARowWithoutStockAfterFallsBackToCurrentStock(t *testing.T) {
+	pool := openDB(t)
+	db := NewPostgres(pool)
+	p := stockedProduct(t, db, pool, 10)
+	key, adjID := newKey(), newID()
+	if _, err := pool.Exec(ctxT(), `
+		INSERT INTO products_schema.idempotency_key (idempotency_key, resource_type, resource_id)
+		VALUES ($1, 'STOCK_ADJUSTMENT', $2)`, key, adjID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctxT(), `
+		INSERT INTO products_schema.stock_adjustment (adjustment_id, product_id, delta, reason, adjusted_by)
+		VALUES ($1, $2, -2, 'legacy', $3)`, adjID, p.ID, newID()); err != nil {
+		t.Fatal(err)
+	}
+
+	again, current, created, err := db.StockAdjustments().CreateOnce(ctxT(), key, newAdjustment(t, p.ID, -1))
+	if err != nil || created || again.ID != adjID {
+		t.Fatalf("replay: id=%s created=%v err=%v", again.ID, created, err)
+	}
+	if again.StockAfter != nil {
+		t.Errorf("StockAfter %v, want nil for a legacy row", *again.StockAfter)
+	}
+	if current != 10 {
+		t.Errorf("currentStock %d, want 10 (the product's stock now)", current)
 	}
 }

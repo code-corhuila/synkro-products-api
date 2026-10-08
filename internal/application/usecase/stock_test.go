@@ -318,3 +318,24 @@ func TestReleaseStockReservation_RestoresStockExactlyOnce(t *testing.T) {
 		t.Errorf("a second release restored stock again: p1=%d p2=%d", h.stock("p1"), h.stock("p2"))
 	}
 }
+
+// A replay is "the same resource": currentStock is the stock this
+// adjustment left, not whatever the product holds by then.
+func TestCreateStockAdjustment_ReplayReportsTheStockTheOriginalLeft(t *testing.T) {
+	h := newStockHarness(product("p1", 10, 100))
+	first, _ := h.svc.CreateStockAdjustment(context.Background(), adjust("key-0001", "p1", -4))
+	if first.CurrentStock != 6 {
+		t.Fatalf("setup: first currentStock %d, want 6", first.CurrentStock)
+	}
+	if _, err := h.svc.CreateStockAdjustment(context.Background(), adjust("key-0002", "p1", 20)); err != nil {
+		t.Fatal(err)
+	}
+
+	again, err := h.svc.CreateStockAdjustment(context.Background(), adjust("key-0001", "p1", -4))
+	if err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+	if again.Created || again.CurrentStock != 6 {
+		t.Errorf("replay: created=%v currentStock=%d, want false and 6 (the product holds %d now)", again.Created, again.CurrentStock, h.stock("p1"))
+	}
+}
