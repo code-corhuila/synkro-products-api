@@ -85,7 +85,9 @@ func (h stockHandlers) createAdjustment(w http.ResponseWriter, r *http.Request) 
 		writeJSON(w, http.StatusOK, body)
 		return
 	}
-	w.Header().Set("Location", "/api/v1/products/"+a.ProductID+"/stock-adjustments/"+a.ID)
+	// The contract defines no GET for a single adjustment (a team decision, not
+	// an oversight), so Location names the affected resource, which is fetchable.
+	w.Header().Set("Location", "/api/v1/products/"+a.ProductID)
 	writeJSON(w, http.StatusCreated, body)
 }
 
