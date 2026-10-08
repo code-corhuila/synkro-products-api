@@ -34,7 +34,7 @@ func (f *fakeStockAdjustments) CreateOnce(_ context.Context, key string, a model
 		return model.StockAdjustment{}, 0, false, f.err
 	}
 	if id, ok := f.keys[key]; ok {
-		return f.byID[id], f.products.byID[f.byID[id].ProductID].Stock, false, nil
+		return f.byID[id], *f.byID[id].StockAfter, false, nil // the recorded stock, not the product's now
 	}
 	p, ok := f.products.byID[a.ProductID]
 	if !ok {
@@ -46,6 +46,8 @@ func (f *fakeStockAdjustments) CreateOnce(_ context.Context, key string, a model
 	p.Stock += a.Delta
 	f.products.byID[p.ID] = p
 	a.AdjustedAt = time.Now()
+	after := p.Stock
+	a.StockAfter = &after
 	f.byID[a.ID] = a
 	f.keys[key] = a.ID
 	return a, p.Stock, true, nil

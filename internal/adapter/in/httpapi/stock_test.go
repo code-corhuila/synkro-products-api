@@ -440,3 +440,23 @@ func TestReleaseStockReservation_RestoresStockAndIsIdempotent(t *testing.T) {
 		t.Errorf("a second release restored stock again: p1=%d p2=%d", api.stockOf(p1.ProductID), api.stockOf(p2.ProductID))
 	}
 }
+
+func TestCreateStockAdjustment_ReplayReportsTheStockTheOriginalLeft(t *testing.T) {
+	api := newTestAPI(t)
+	p := api.stocked("Mouse", 100, 10)
+	body := map[string]any{"delta": -3, "reason": "Damaged"}
+
+	api.adjust(p.ProductID, body, "same-key-123")
+	if r := api.adjust(p.ProductID, map[string]any{"delta": 5, "reason": "Restock"}, "other-key-123"); r.status != http.StatusCreated {
+		t.Fatalf("second adjustment: %d %s", r.status, r.body)
+	}
+	again := api.adjust(p.ProductID, body, "same-key-123")
+	if again.status != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", again.status, again.body)
+	}
+	var a adjustmentJSON
+	again.decode(t, &a)
+	if a.CurrentStock != 7 {
+		t.Errorf("replay currentStock %d, want 7 (what the original left; the product holds %d now)", a.CurrentStock, api.stockOf(p.ProductID))
+	}
+}
