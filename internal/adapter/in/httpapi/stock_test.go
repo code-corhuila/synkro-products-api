@@ -82,7 +82,9 @@ func TestCreateStockAdjustment_Returns201WithLocationAndTheContractShape(t *test
 	if a.AdjustedBy != testSub {
 		t.Errorf("adjustedBy %q, want the token's sub %q", a.AdjustedBy, testSub)
 	}
-	if loc := r.header.Get("Location"); !strings.HasPrefix(loc, "/api/v1/products/"+p.ProductID+"/stock-adjustments/") || !strings.HasSuffix(loc, a.AdjustmentID) {
+	// The contract defines no GET for a single adjustment, so Location names
+	// the affected resource, which is fetchable.
+	if loc := r.header.Get("Location"); loc != "/api/v1/products/"+p.ProductID {
 		t.Errorf("unexpected Location %q", loc)
 	}
 	if got := api.stockOf(p.ProductID); got != 7 {
