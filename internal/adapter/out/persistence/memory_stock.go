@@ -29,7 +29,7 @@ func (r memoryAdjustments) CreateOnce(_ context.Context, key string, a model.Sto
 			return model.StockAdjustment{}, 0, false, err
 		}
 		orig := r.m.adjustments[id]
-		return orig, r.m.products[orig.ProductID].v.Stock, false, nil
+		return orig, *orig.StockAfter, false, nil // what it left, not the stock now
 	}
 	row, ok := r.m.products[a.ProductID]
 	if !ok {
@@ -41,6 +41,8 @@ func (r memoryAdjustments) CreateOnce(_ context.Context, key string, a model.Sto
 	row.v.Stock += a.Delta
 	r.m.products[a.ProductID] = row
 	a.AdjustedAt = time.Now().UTC()
+	after := row.v.Stock
+	a.StockAfter = &after
 	r.m.adjustments[a.ID] = a
 	r.m.keys[key] = memKey{resourceAdjustment, a.ID}
 	return a, row.v.Stock, true, nil

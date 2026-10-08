@@ -21,6 +21,10 @@ type StockAdjustment struct {
 	Reason     string
 	AdjustedBy string
 	AdjustedAt time.Time // set by the store when the row is written
+	// StockAfter is the product's stock right after this adjustment, recorded
+	// by the store in the same transaction so a replay can report it. Nil only
+	// for rows written before stock_after existed (migration V017).
+	StockAfter *int
 }
 
 func NewStockAdjustment(id, productID string, delta int, reason, adjustedBy string) (StockAdjustment, error) {

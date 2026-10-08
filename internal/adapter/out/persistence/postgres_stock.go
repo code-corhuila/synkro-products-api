@@ -67,11 +67,15 @@ func (r pgAdjustments) CreateOnce(ctx context.Context, key string, a model.Stock
 			a.ProductID, a.Delta).Scan(&current); err != nil {
 			return err
 		}
+		// The stock this adjustment leaves is kept with it, so a replay can
+		// report it however much the product moves afterwards.
+		after := current
+		a.StockAfter = &after
 		return tx.QueryRow(ctx, `
-			INSERT INTO products_schema.stock_adjustment (adjustment_id, product_id, delta, reason, adjusted_by)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO products_schema.stock_adjustment (adjustment_id, product_id, delta, reason, adjusted_by, stock_after)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			RETURNING adjusted_at`,
-			a.ID, a.ProductID, a.Delta, a.Reason, a.AdjustedBy).Scan(&a.AdjustedAt)
+			a.ID, a.ProductID, a.Delta, a.Reason, a.AdjustedBy, after).Scan(&a.AdjustedAt)
 	})
 	if err != nil {
 		return model.StockAdjustment{}, 0, false, err
@@ -80,19 +84,27 @@ func (r pgAdjustments) CreateOnce(ctx context.Context, key string, a model.Stock
 		return a, current, true, nil
 	}
 
-	// A replay: the stored adjustment, and the product's stock as it is now
-	// (the stock right after the original is not kept anywhere).
+	// A replay returns the stored adjustment and the stock it left
+	// (stock_after), however much the product has moved since.
 	var orig model.StockAdjustment
+	var productStock int
 	err = r.db.pool.QueryRow(ctx, `
-		SELECT a.adjustment_id::text, a.product_id::text, a.delta, a.reason, a.adjusted_by::text, a.adjusted_at, p.stock
+		SELECT a.adjustment_id::text, a.product_id::text, a.delta, a.reason, a.adjusted_by::text, a.adjusted_at, a.stock_after, p.stock
 		FROM products_schema.stock_adjustment a
 		JOIN products_schema.product p ON p.product_id = a.product_id
 		WHERE a.adjustment_id = $1`, id).
-		Scan(&orig.ID, &orig.ProductID, &orig.Delta, &orig.Reason, &orig.AdjustedBy, &orig.AdjustedAt, &current)
+		Scan(&orig.ID, &orig.ProductID, &orig.Delta, &orig.Reason, &orig.AdjustedBy, &orig.AdjustedAt, &orig.StockAfter, &productStock)
 	if err != nil {
 		return model.StockAdjustment{}, 0, false, fmt.Errorf("reading the original adjustment: %w", err)
 	}
-	return orig, current, false, nil
+	if orig.StockAfter != nil {
+		return orig, *orig.StockAfter, false, nil
+	}
+	// Backward compatibility ONLY: a row written before migration V017 has no
+	// stock_after, and the stock it left cannot be reconstructed. The
+	// product's stock now is the closest answer; every row written since
+	// V017 takes the branch above.
+	return orig, productStock, false, nil
 }
 
 // ─── Reservations ──────────────────────────────────────────────────────
