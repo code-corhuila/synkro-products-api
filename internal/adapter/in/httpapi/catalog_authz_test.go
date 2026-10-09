@@ -152,3 +152,75 @@ func TestCatalogReads_ArePermittedToAllThreeRolesAndTheWorkersToken(t *testing.T
 		}
 	}
 }
+
+// ─── GET /products/{id} and inactive products ──────────────────────────
+
+// inactiveProduct creates a product and deactivates it, as the default
+// (ADMIN) caller.
+func (a *testAPI) inactiveProduct(name string) productJSON {
+	a.t.Helper()
+	p := a.stocked(name, 100, 5)
+	if r := a.do("DELETE", "/api/v1/products/"+p.ProductID, nil); r.status != http.StatusOK {
+		a.t.Fatalf("deactivating: %d %s", r.status, r.body)
+	}
+	return p
+}
+
+// The contract: "Returns the product if it exists and is active (or if the
+// caller is ADMIN/INVENTORY, including inactive)". For anyone else an
+// inactive product is indistinguishable from one that does not exist.
+func TestGetProduct_AnInactiveProductIs404ForACallerWithoutProductsWrite(t *testing.T) {
+	callers := map[string]string{
+		"SALESPERSON":        salespersonToken,
+		"the worker's token": workerToken,
+		"products:read only": tokenWith(nil, []string{"products:read"}),
+	}
+	for who, token := range callers {
+		t.Run(who, func(t *testing.T) {
+			api := newTestAPI(t)
+			p := api.inactiveProduct("Mouse")
+
+			r := api.do("GET", "/api/v1/products/"+p.ProductID, nil, as(token)...)
+			missing := api.do("GET", "/api/v1/products/0192a000-0000-7000-8000-00000000dead", nil, as(token)...)
+
+			if r.status != http.StatusNotFound || r.errorBody(t).Error != "NOT_FOUND" {
+				t.Fatalf("expected 404 NOT_FOUND, got %d: %s", r.status, r.body)
+			}
+			if got, want := r.errorBody(t).Message, missing.errorBody(t).Message; got != want {
+				t.Errorf("an inactive product must look like a missing one: %q vs %q", got, want)
+			}
+		})
+	}
+}
+
+func TestGetProduct_AnInactiveProductIsStillVisibleToAdminInventoryAndProductsWrite(t *testing.T) {
+	callers := map[string]string{
+		"ADMIN":                 adminToken,
+		"INVENTORY":             inventoryToken,
+		"products:read + write": tokenWith(nil, []string{"products:read", "products:write"}),
+	}
+	for who, token := range callers {
+		t.Run(who, func(t *testing.T) {
+			api := newTestAPI(t)
+			p := api.inactiveProduct("Mouse")
+
+			r := api.do("GET", "/api/v1/products/"+p.ProductID, nil, as(token)...)
+
+			var got productJSON
+			r.decode(t, &got)
+			if r.status != http.StatusOK || got.ProductID != p.ProductID || got.Active {
+				t.Errorf("expected 200 with the inactive product, got %d: %s", r.status, r.body)
+			}
+		})
+	}
+}
+
+func TestGetProduct_AnActiveProductIsVisibleToEveryReader(t *testing.T) {
+	api := newTestAPI(t)
+	p := api.stocked("Mouse", 100, 5)
+	for who, token := range map[string]string{"SALESPERSON": salespersonToken, "the worker's token": workerToken} {
+		if r := api.do("GET", "/api/v1/products/"+p.ProductID, nil, as(token)...); r.status != http.StatusOK {
+			t.Errorf("%s: expected 200, got %d: %s", who, r.status, r.body)
+		}
+	}
+}
