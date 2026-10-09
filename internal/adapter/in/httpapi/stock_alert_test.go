@@ -500,3 +500,24 @@ func TestStockAlerts_AnOpenAlertOfAProductDeactivatedLaterIsUntouched(t *testing
 		t.Errorf("resolve: expected 200, got %d: %s", resolved.status, resolved.body)
 	}
 }
+
+// A product deactivated while its alert is OPEN: the worker's next daily key
+// gets the open alert back (200), not a 422 on every run.
+func TestOpenStockAlert_ADifferentKeyForADeactivatedProductWithAnOpenAlertAnswers200(t *testing.T) {
+	api := newTestAPI(t)
+	p := api.stocked("Mouse", 100, 1)
+	first := api.openAlert(workerToken, alertBody(p.ProductID, 1), "low-stock:"+p.ProductID+":2026-10-08")
+	api.do("DELETE", "/api/v1/products/"+p.ProductID, nil)
+
+	next := api.openAlert(workerToken, alertBody(p.ProductID, 1), "low-stock:"+p.ProductID+":2026-10-09")
+
+	if next.status != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", next.status, next.body)
+	}
+	var a, b stockAlertJSON
+	first.decode(t, &a)
+	next.decode(t, &b)
+	if a != b {
+		t.Errorf("expected the open alert %+v, got %+v", a, b)
+	}
+}
