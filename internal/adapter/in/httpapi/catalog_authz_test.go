@@ -224,3 +224,79 @@ func TestGetProduct_AnActiveProductIsVisibleToEveryReader(t *testing.T) {
 		}
 	}
 }
+
+// ─── GET /products and the active filter ───────────────────────────────
+
+type productPageJSON struct {
+	Data []productJSON `json:"data"`
+	Meta pageMeta      `json:"meta"`
+}
+
+// listFixture has one active and one inactive product.
+func listFixture(t *testing.T) (api *testAPI, active, inactive productJSON) {
+	api = newTestAPI(t)
+	active = api.stocked("Active", 100, 5)
+	inactive = api.inactiveProduct("Inactive")
+	return api, active, inactive
+}
+
+func listedIDs(t *testing.T, r apiResponse) []string {
+	t.Helper()
+	if r.status != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", r.status, r.body)
+	}
+	var page productPageJSON
+	r.decode(t, &page)
+	ids := []string{}
+	for _, p := range page.Data {
+		ids = append(ids, p.ProductID)
+	}
+	return ids
+}
+
+func TestListProducts_CallersWithoutProductsWriteNeverSeeInactiveProducts(t *testing.T) {
+	callers := map[string]string{
+		"SALESPERSON":        salespersonToken,
+		"the worker's token": workerToken,
+		"products:read only": tokenWith(nil, []string{"products:read"}),
+	}
+	queries := map[string]string{"active=false": "?active=false", "no active filter": "", "active=true": "?active=true"}
+	for who, token := range callers {
+		for qname, q := range queries {
+			t.Run(who+" / "+qname, func(t *testing.T) {
+				api, active, _ := listFixture(t)
+
+				r := api.do("GET", "/api/v1/products"+q, nil, as(token)...)
+
+				ids := listedIDs(t, r)
+				var page productPageJSON
+				r.decode(t, &page)
+				if len(ids) != 1 || ids[0] != active.ProductID || page.Meta.Total != 1 {
+					t.Errorf("expected only the active product (total 1), got %v, meta %+v", ids, page.Meta)
+				}
+			})
+		}
+	}
+}
+
+func TestListProducts_AdminAndInventoryHonourTheActiveFilterAsGiven(t *testing.T) {
+	for who, token := range map[string]string{"ADMIN": adminToken, "INVENTORY": inventoryToken, "products:read + write": tokenWith(nil, []string{"products:read", "products:write"})} {
+		t.Run(who, func(t *testing.T) {
+			api, active, inactive := listFixture(t)
+
+			onlyInactive := listedIDs(t, api.do("GET", "/api/v1/products?active=false", nil, as(token)...))
+			onlyActive := listedIDs(t, api.do("GET", "/api/v1/products?active=true", nil, as(token)...))
+			all := listedIDs(t, api.do("GET", "/api/v1/products", nil, as(token)...))
+
+			if len(onlyInactive) != 1 || onlyInactive[0] != inactive.ProductID {
+				t.Errorf("active=false: expected only the inactive product, got %v", onlyInactive)
+			}
+			if len(onlyActive) != 1 || onlyActive[0] != active.ProductID {
+				t.Errorf("active=true: expected only the active product, got %v", onlyActive)
+			}
+			if len(all) != 2 {
+				t.Errorf("no filter: expected both products, got %v", all)
+			}
+		})
+	}
+}
