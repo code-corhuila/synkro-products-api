@@ -47,6 +47,7 @@ func main() {
 		usecase.NewProductService(db.Products(), db.Categories(), newID),
 		usecase.NewCategoryService(db.Categories(), newID),
 		usecase.NewStockService(db.StockAdjustments(), db.StockReservations(), newID),
+		usecase.NewStockAlertService(db.StockAlerts(), newID, time.Now),
 	)
 
 	srv := &http.Server{
