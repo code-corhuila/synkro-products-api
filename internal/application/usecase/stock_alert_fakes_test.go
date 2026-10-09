@@ -58,14 +58,15 @@ func (f *fakeStockAlerts) OpenOnce(_ context.Context, key string, a model.StockA
 	if !ok {
 		return model.StockAlert{}, false, out.ErrNotFound
 	}
-	if !p.Active {
-		return model.StockAlert{}, false, out.ErrProductInactive
-	}
 	// 2. The business rule: one OPEN alert per product, whatever the key.
 	// A new key for it is spent on the existing alert.
 	if existing, ok := f.openFor(a.ProductID); ok {
 		f.keys[key] = existing.ID
 		return existing, false, nil
+	}
+	// 3. Only a NEW alert needs an active product.
+	if !p.Active {
+		return model.StockAlert{}, false, out.ErrProductInactive
 	}
 	a.OpenedAt = time.Now()
 	f.byID[a.ID] = a
