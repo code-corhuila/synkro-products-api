@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -61,4 +63,28 @@ func looksLikeJWT(token string) bool {
 		}
 	}
 	return true
+}
+
+// subjectFrom reads the sub claim of the Bearer token as a UUID. Like
+// requireAuth it verifies nothing: the signature is still not checked
+// (real RS256 verification is deferred), so until then adjustedBy is only
+// as trustworthy as the caller. It reports false for a token without a
+// UUID sub, which cannot be stored in stock_adjustment.adjusted_by.
+func subjectFrom(r *http.Request) (string, bool) {
+	token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return "", false
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(parts[1], "="))
+	if err != nil {
+		return "", false
+	}
+	var claims struct {
+		Sub string `json:"sub"`
+	}
+	if json.Unmarshal(payload, &claims) != nil {
+		return "", false
+	}
+	return canonicalUUID(claims.Sub)
 }

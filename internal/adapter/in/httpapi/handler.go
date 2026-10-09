@@ -17,9 +17,10 @@ type healthResponse struct {
 // NewRouter wires every route of this service. /health is public
 // (cross-cutting.md §4); every other route is wrapped by the
 // default-deny middleware.
-func NewRouter(products in.ProductUseCases, categories in.CategoryUseCases) http.Handler {
+func NewRouter(products in.ProductUseCases, categories in.CategoryUseCases, stock in.StockUseCases) http.Handler {
 	p := productHandlers{products}
 	c := categoryHandlers{categories}
+	s := stockHandlers{stock}
 
 	protected := http.NewServeMux()
 	protected.HandleFunc("GET /api/v1/products", p.list)
@@ -34,6 +35,13 @@ func NewRouter(products in.ProductUseCases, categories in.CategoryUseCases) http
 	protected.HandleFunc("POST /api/v1/products/categories", c.create)
 	protected.HandleFunc("PUT /api/v1/products/categories/{id}", c.rename)
 	protected.HandleFunc("DELETE /api/v1/products/categories/{id}", c.deactivate)
+
+	protected.HandleFunc("POST /api/v1/products/{id}/stock-adjustments", s.createAdjustment)
+
+	// Internal, service-to-service (the workflow saga); not routed by the gateway.
+	protected.HandleFunc("POST /api/v1/stock-reservations", s.createReservation)
+	protected.HandleFunc("GET /api/v1/stock-reservations/{id}", s.getReservation)
+	protected.HandleFunc("POST /api/v1/stock-reservations/{id}/release", s.releaseReservation)
 
 	protected.HandleFunc("/", writeNotFound)
 

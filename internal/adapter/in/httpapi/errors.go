@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -47,7 +48,17 @@ func writeNotFound(w http.ResponseWriter, r *http.Request) {
 // purpose: a product's missing/inactive category is 404, a category's
 // name collision is 422.
 func writeUseCaseError(w http.ResponseWriter, r *http.Request, err error) {
+	var lineErr *in.ReservationLineError
 	switch {
+	case errors.As(err, &lineErr):
+		writeLineRuleViolation(w, r, lineErr)
+	case errors.Is(err, in.ErrInsufficientStock): // a stock adjustment: no line involved
+		writeError(w, r, http.StatusUnprocessableEntity, "BUSINESS_RULE_VIOLATION",
+			"The adjustment would take stock below 0",
+			errorDetail{Field: "delta", Message: "exceeds the current stock"})
+	case errors.Is(err, in.ErrReservationNotFound):
+		writeError(w, r, http.StatusNotFound, "NOT_FOUND", "Stock reservation not found")
+
 	case errors.Is(err, in.ErrProductNotFound):
 		writeError(w, r, http.StatusNotFound, "NOT_FOUND", "Product not found")
 	case errors.Is(err, in.ErrCategoryNotFound):
@@ -71,10 +82,30 @@ func writeUseCaseError(w http.ResponseWriter, r *http.Request, err error) {
 		writeValidationError(w, r, []errorDetail{{Field: "name", Message: "required"}})
 	case errors.Is(err, model.ErrPriceNotPositive):
 		writeValidationError(w, r, []errorDetail{{Field: "priceCents", Message: "must be greater than 0"}})
+	case errors.Is(err, model.ErrDeltaZero):
+		writeValidationError(w, r, []errorDetail{{Field: "delta", Message: "must not be zero"}})
+	case errors.Is(err, model.ErrReasonRequired):
+		writeValidationError(w, r, []errorDetail{{Field: "reason", Message: "required"}})
+	case errors.Is(err, model.ErrNoLines), errors.Is(err, model.ErrDuplicateProduct), errors.Is(err, model.ErrQuantityNotPositive):
+		writeValidationError(w, r, []errorDetail{{Field: "lines", Message: err.Error()}})
 
 	default:
 		slog.ErrorContext(r.Context(), "unexpected error", "error", err, "traceId", traceIDFrom(r),
 			"method", r.Method, "path", r.URL.Path)
 		writeError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Unexpected error")
 	}
+}
+
+// writeLineRuleViolation answers a reservation that was refused because of
+// one line: 422, with a detail that points at that line.
+func writeLineRuleViolation(w http.ResponseWriter, r *http.Request, e *in.ReservationLineError) {
+	if errors.Is(e.Err, in.ErrProductUnavailable) {
+		writeError(w, r, http.StatusUnprocessableEntity, "BUSINESS_RULE_VIOLATION",
+			"A product is inactive or does not exist",
+			errorDetail{Field: fmt.Sprintf("lines[%d].productId", e.Index), Message: fmt.Sprintf("product %s is inactive or does not exist", e.ProductID)})
+		return
+	}
+	writeError(w, r, http.StatusUnprocessableEntity, "BUSINESS_RULE_VIOLATION",
+		"Requested quantity exceeds available stock",
+		errorDetail{Field: fmt.Sprintf("lines[%d].quantity", e.Index), Message: fmt.Sprintf("exceeds available stock for product %s", e.ProductID)})
 }
