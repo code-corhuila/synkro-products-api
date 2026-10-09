@@ -438,3 +438,48 @@ func TestPostgres_StockAlert_ConcurrentResolvesAgreeOnOneResolvedAt(t *testing.T
 		}
 	}
 }
+
+// ─── Inactive products ─────────────────────────────────────────────────
+
+func deactivate(t *testing.T, db *Postgres, p model.Product) {
+	t.Helper()
+	p.Active = false
+	if err := db.Products().Update(ctxT(), p); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPostgres_StockAlert_OpenOnceForAnInactiveProductIsRefusedAndKeepsNoKey(t *testing.T) {
+	pool := openDB(t)
+	db := NewPostgres(pool)
+	p := stockedProduct(t, db, pool, 1)
+	deactivate(t, db, p)
+	key := newKey()
+
+	_, _, err := db.StockAlerts().OpenOnce(ctxT(), key, newAlert(t, p.ID, 1))
+
+	if !errors.Is(err, out.ErrProductInactive) {
+		t.Fatalf("expected ErrProductInactive, got %v", err)
+	}
+	if n := count(t, pool, `SELECT count(*) FROM products_schema.stock_alert WHERE product_id = $1`, p.ID); n != 0 {
+		t.Errorf("no alert may be written, found %d", n)
+	}
+	if n := keyRows(t, pool, key); n != 0 {
+		t.Errorf("the refused open must roll its key back, found %d rows", n)
+	}
+}
+
+func TestPostgres_StockAlert_ASameKeyReplayAfterTheProductIsDeactivatedReturnsTheOriginal(t *testing.T) {
+	pool := openDB(t)
+	db := NewPostgres(pool)
+	p := stockedProduct(t, db, pool, 1)
+	key := newKey()
+	first, _, _ := db.StockAlerts().OpenOnce(ctxT(), key, newAlert(t, p.ID, 1))
+	deactivate(t, db, p)
+
+	again, created, err := db.StockAlerts().OpenOnce(ctxT(), key, newAlert(t, p.ID, 1))
+
+	if err != nil || created || again.ID != first.ID {
+		t.Errorf("created=%v err=%v alert=%+v", created, err, again)
+	}
+}

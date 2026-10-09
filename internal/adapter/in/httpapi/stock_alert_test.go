@@ -461,3 +461,42 @@ func TestListStockAlerts_AnEmptyListIsAnEmptyArray(t *testing.T) {
 		t.Errorf("expected data to be [], got %s", r.body)
 	}
 }
+
+func TestOpenStockAlert_Returns422ForAnInactiveProduct(t *testing.T) {
+	api := newTestAPI(t)
+	p := api.inactiveProduct("Mouse")
+
+	r := api.openAlert(workerToken, alertBody(p.ProductID, 1), api.key())
+
+	if r.status != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422, got %d: %s", r.status, r.body)
+	}
+	e := r.errorBody(t)
+	if e.Error != "BUSINESS_RULE_VIOLATION" || e.TraceID == "" || len(e.Details) == 0 || e.Details[0].Field != "productId" {
+		t.Errorf("unexpected error envelope: %+v", e)
+	}
+	var page alertPageJSON
+	api.listAlerts(adminToken, "").decode(t, &page)
+	if page.Meta.Total != 0 {
+		t.Errorf("no alert may be created, found %d", page.Meta.Total)
+	}
+}
+
+// An alert opened while the product was active keeps working afterwards.
+func TestStockAlerts_AnOpenAlertOfAProductDeactivatedLaterIsUntouched(t *testing.T) {
+	api := newTestAPI(t)
+	p := api.stocked("Mouse", 100, 1)
+	al := api.opened(p.ProductID, 1)
+	api.do("DELETE", "/api/v1/products/"+p.ProductID, nil)
+
+	var page alertPageJSON
+	api.listAlerts(adminToken, "?status=OPEN").decode(t, &page)
+	resolved := api.resolveAlert(workerToken, al.AlertID)
+
+	if len(page.Data) != 1 || page.Data[0].AlertID != al.AlertID {
+		t.Errorf("the open alert must still be listed, got %+v", page.Data)
+	}
+	if resolved.status != http.StatusOK {
+		t.Errorf("resolve: expected 200, got %d: %s", resolved.status, resolved.body)
+	}
+}

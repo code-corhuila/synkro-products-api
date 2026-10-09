@@ -2,6 +2,7 @@ package out
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/code-corhuila/synkro-products-api/internal/domain/model"
@@ -30,3 +31,6 @@ type StockAlertRepository interface {
 	// Newest first; status nil means every status.
 	List(ctx context.Context, page, limit int, status *string) (items []model.StockAlert, total int, err error)
 }
+
+// ErrProductInactive: OpenOnce found the product, but it is inactive.
+var ErrProductInactive = errors.New("product is inactive")
