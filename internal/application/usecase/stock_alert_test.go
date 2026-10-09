@@ -218,3 +218,57 @@ func TestListStockAlerts_Paginates(t *testing.T) {
 		t.Errorf("unexpected page 2: %+v err=%v", res, err)
 	}
 }
+
+// ─── Inactive products ─────────────────────────────────────────────────
+
+func inactiveProduct(id string) model.Product {
+	p := product(id, 1, 100)
+	p.Active = false
+	return p
+}
+
+// The product exists but no longer takes part in sales or reservations, so
+// an alert about its stock has no action to prompt: a business rule
+// violation, not a 404.
+func TestOpenStockAlert_RejectsAnInactiveProductAsABusinessRuleViolation(t *testing.T) {
+	h := newAlertHarness(inactiveProduct("p1"))
+
+	_, err := h.svc.OpenStockAlert(context.Background(), openCmd("low-stock:p1:2026-10-09", "p1", 1))
+
+	if !errors.Is(err, in.ErrProductInactive) {
+		t.Fatalf("expected ErrProductInactive, got %v", err)
+	}
+	if errors.Is(err, in.ErrProductNotFound) {
+		t.Errorf("an inactive product exists: it must not be reported as not found")
+	}
+	if len(h.alerts.byID) != 0 {
+		t.Errorf("no alert may be stored, found %d", len(h.alerts.byID))
+	}
+}
+
+// An exact retransmission is answered from the key, even if the product
+// was deactivated after the alert was opened.
+func TestOpenStockAlert_ASameKeyRetransmissionStillReturnsTheOriginalAfterTheProductIsDeactivated(t *testing.T) {
+	h := newAlertHarness(product("p1", 1, 100))
+	first, _ := h.svc.OpenStockAlert(context.Background(), openCmd("low-stock:p1:2026-10-09", "p1", 1))
+	h.products.byID["p1"] = inactiveProduct("p1")
+
+	again, err := h.svc.OpenStockAlert(context.Background(), openCmd("low-stock:p1:2026-10-09", "p1", 1))
+
+	if err != nil || again.Created || again.Alert.ID != first.Alert.ID {
+		t.Errorf("expected the original alert, got %+v err=%v", again, err)
+	}
+}
+
+// An alert already OPEN for a product deactivated later is not touched.
+func TestResolveStockAlert_StillWorksForAProductDeactivatedAfterwards(t *testing.T) {
+	h := newAlertHarness(product("p1", 1, 100))
+	opened, _ := h.svc.OpenStockAlert(context.Background(), openCmd("low-stock:p1:2026-10-09", "p1", 1))
+	h.products.byID["p1"] = inactiveProduct("p1")
+
+	a, err := h.svc.ResolveStockAlert(context.Background(), opened.Alert.ID)
+
+	if err != nil || a.Status != model.AlertStatusResolved {
+		t.Errorf("unexpected: %+v err=%v", a, err)
+	}
+}
