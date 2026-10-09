@@ -26,8 +26,12 @@ func (r memoryAlerts) OpenOnce(_ context.Context, key string, a model.StockAlert
 		}
 		return r.m.alerts[id].v, false, nil
 	}
-	if _, ok := r.m.products[a.ProductID]; !ok {
+	prod, ok := r.m.products[a.ProductID]
+	if !ok {
 		return model.StockAlert{}, false, out.ErrNotFound
+	}
+	if !prod.v.Active {
+		return model.StockAlert{}, false, out.ErrProductInactive
 	}
 	// Then the business rule: an OPEN alert for the product wins, and the
 	// new key is spent on it.

@@ -36,6 +36,8 @@ func (s *StockAlertService) OpenStockAlert(ctx context.Context, cmd in.OpenStock
 	switch {
 	case errors.Is(err, out.ErrIdempotencyKeyReused):
 		return in.OpenStockAlertResult{}, in.ErrIdempotencyKeyReused
+	case errors.Is(err, out.ErrProductInactive):
+		return in.OpenStockAlertResult{}, in.ErrProductInactive
 	case err != nil:
 		return in.OpenStockAlertResult{}, notFoundAs(err, in.ErrProductNotFound)
 	}
