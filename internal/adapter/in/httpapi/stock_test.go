@@ -193,7 +193,7 @@ func TestCreateStockAdjustment_TokenWithoutAUUIDSubIs401(t *testing.T) {
 	api := newTestAPI(t)
 	p := api.stocked("Mouse", 100, 10)
 	r := api.do("POST", "/api/v1/products/"+p.ProductID+"/stock-adjustments", map[string]any{"delta": 1, "reason": "x"},
-		"Idempotency-Key", "adjust-key-1", "Authorization", "Bearer "+tokenWithSub("not-a-uuid"))
+		"Idempotency-Key", "adjust-key-1", "Authorization", "Bearer "+tokenWithClaims("not-a-uuid", []string{"ADMIN"}, []string{"products:write"}))
 	if r.status != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d: %s", r.status, r.body)
 	}
