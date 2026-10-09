@@ -96,6 +96,13 @@ func (h productHandlers) list(w http.ResponseWriter, r *http.Request) {
 		writeValidationError(w, r, q.details)
 		return
 	}
+	// Same rule as getProduct: inactive products exist only for callers who
+	// can write the catalog, so for anyone else the filter is forced to
+	// active=true whatever was asked.
+	if !canWriteCatalog(claimsFrom(r)) {
+		onlyActive := true
+		query.Active = &onlyActive
+	}
 
 	res, err := h.uc.ListProducts(r.Context(), query)
 	if err != nil {
