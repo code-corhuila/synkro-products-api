@@ -24,6 +24,7 @@ type Memory struct {
 
 	adjustments  map[string]model.StockAdjustment
 	reservations map[string]model.StockReservation
+	alerts       map[string]memRow[model.StockAlert]
 }
 
 type memRow[T any] struct {
@@ -41,6 +42,7 @@ const (
 	resourceCategory    = "CATEGORY"
 	resourceAdjustment  = "STOCK_ADJUSTMENT"
 	resourceReservation = "STOCK_RESERVATION"
+	resourceAlert       = "STOCK_ALERT"
 )
 
 func NewMemory() *Memory {
@@ -50,6 +52,7 @@ func NewMemory() *Memory {
 		keys:         map[string]memKey{},
 		adjustments:  map[string]model.StockAdjustment{},
 		reservations: map[string]model.StockReservation{},
+		alerts:       map[string]memRow[model.StockAlert]{},
 	}
 }
 
