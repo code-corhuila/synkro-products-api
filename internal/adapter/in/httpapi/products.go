@@ -120,6 +120,14 @@ func (h productHandlers) get(w http.ResponseWriter, r *http.Request) {
 		writeUseCaseError(w, r, err)
 		return
 	}
+	// An inactive product exists only for callers who can write the catalog;
+	// for anyone else it is indistinguishable from a missing one (contract:
+	// "Returns the product if it exists and is active (or if the caller is
+	// ADMIN/INVENTORY, including inactive)").
+	if !res.Product.Active && !canWriteCatalog(claimsFrom(r)) {
+		writeUseCaseError(w, r, in.ErrProductNotFound)
+		return
+	}
 	writeJSON(w, http.StatusOK, toProductResponse(res.Product))
 }
 
