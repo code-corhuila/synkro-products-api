@@ -97,7 +97,7 @@ func (a *testAPI) do(method, path string, body any, headers ...string) apiRespon
 	if err != nil {
 		a.t.Fatal(err)
 	}
-	req.Header.Set("Authorization", "Bearer "+testToken)
+	req.Header.Set("Authorization", "Bearer "+adminToken)
 	req.Header.Set("Content-Type", "application/json")
 	for i := 0; i+1 < len(headers); i += 2 {
 		req.Header.Set(headers[i], headers[i+1])

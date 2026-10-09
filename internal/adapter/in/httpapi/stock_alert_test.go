@@ -26,8 +26,12 @@ type alertPageJSON struct {
 // tokenWith builds a JWT-shaped token carrying the claims the alert
 // endpoints authorize on (the signature is not verified, see requireAuth).
 func tokenWith(roles, permissions []string) string {
+	return tokenWithClaims(testSub, roles, permissions)
+}
+
+func tokenWithClaims(sub string, roles, permissions []string) string {
 	enc := base64.RawURLEncoding.EncodeToString
-	payload, _ := json.Marshal(map[string]any{"sub": testSub, "roles": roles, "permissions": permissions})
+	payload, _ := json.Marshal(map[string]any{"sub": sub, "roles": roles, "permissions": permissions})
 	return enc([]byte(`{"alg":"RS256"}`)) + "." + enc(payload) + ".c2ln"
 }
 
