@@ -17,10 +17,11 @@ type healthResponse struct {
 // NewRouter wires every route of this service. /health is public
 // (cross-cutting.md §4); every other route is wrapped by the
 // default-deny middleware.
-func NewRouter(products in.ProductUseCases, categories in.CategoryUseCases, stock in.StockUseCases) http.Handler {
+func NewRouter(products in.ProductUseCases, categories in.CategoryUseCases, stock in.StockUseCases, alerts in.StockAlertUseCases) http.Handler {
 	p := productHandlers{products}
 	c := categoryHandlers{categories}
 	s := stockHandlers{stock}
+	al := alertHandlers{alerts}
 
 	protected := http.NewServeMux()
 	protected.HandleFunc("GET /api/v1/products", p.list)
@@ -42,6 +43,12 @@ func NewRouter(products in.ProductUseCases, categories in.CategoryUseCases, stoc
 	protected.HandleFunc("POST /api/v1/stock-reservations", s.createReservation)
 	protected.HandleFunc("GET /api/v1/stock-reservations/{id}", s.getReservation)
 	protected.HandleFunc("POST /api/v1/stock-reservations/{id}/release", s.releaseReservation)
+
+	// Opened and resolved by synkro-worker's service token; listed by
+	// ADMIN, INVENTORY and that token. Authorization is per handler.
+	protected.HandleFunc("GET /api/v1/stock-alerts", al.list)
+	protected.HandleFunc("POST /api/v1/stock-alerts", al.open)
+	protected.HandleFunc("POST /api/v1/stock-alerts/{id}/resolve", al.resolve)
 
 	protected.HandleFunc("/", writeNotFound)
 
