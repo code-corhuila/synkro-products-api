@@ -30,9 +30,6 @@ func (r memoryAlerts) OpenOnce(_ context.Context, key string, a model.StockAlert
 	if !ok {
 		return model.StockAlert{}, false, out.ErrNotFound
 	}
-	if !prod.v.Active {
-		return model.StockAlert{}, false, out.ErrProductInactive
-	}
 	// Then the business rule: an OPEN alert for the product wins, and the
 	// new key is spent on it.
 	for _, row := range r.m.alerts {
@@ -40,6 +37,10 @@ func (r memoryAlerts) OpenOnce(_ context.Context, key string, a model.StockAlert
 			r.m.keys[key] = memKey{resourceAlert, row.v.ID}
 			return row.v, false, nil
 		}
+	}
+	// Only a new alert needs an active product.
+	if !prod.v.Active {
+		return model.StockAlert{}, false, out.ErrProductInactive
 	}
 	a.OpenedAt = time.Now().UTC()
 	r.m.seq++

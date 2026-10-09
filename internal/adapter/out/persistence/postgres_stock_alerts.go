@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/code-corhuila/synkro-products-api/internal/application/port/out"
 	"github.com/code-corhuila/synkro-products-api/internal/domain/model"
@@ -18,7 +17,6 @@ func (db *Postgres) StockAlerts() out.StockAlertRepository { return pgAlerts{db}
 type pgAlerts struct{ db *Postgres }
 
 const (
-	pgForeignKeyViolation = "23503"
 	// openAttempts bounds the insert-or-find loop in OpenOnce: it only
 	// repeats when the OPEN alert it conflicted with is resolved before it
 	// can be read, which takes a resolve landing in that exact window.
@@ -51,28 +49,18 @@ func (r pgAlerts) OpenOnce(ctx context.Context, key string, a model.StockAlert) 
 
 	resultID := a.ID
 	id, claimed, err := r.db.createOnce(ctx, key, resourceAlert, a.ID, func(tx pgx.Tx) error {
-		// The product must exist and be active. FOR SHARE keeps a concurrent
-		// deactivation (an UPDATE of this row) from slipping in before this
-		// transaction commits. It runs after the key claim, so an exact
-		// retransmission never gets here and is answered from the key.
-		var active bool
-		err := tx.QueryRow(ctx,
-			`SELECT active FROM products_schema.product WHERE product_id = $1 FOR SHARE`, a.ProductID).Scan(&active)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return out.ErrNotFound
-		}
-		if err != nil {
-			return err
-		}
-		if !active {
-			return out.ErrProductInactive
-		}
-
 		for range openAttempts {
+			// The INSERT goes first and the partial unique index decides: a
+			// product that already has an OPEN alert yields no row, whatever
+			// its state. The SELECT ... FROM product also yields no row for a
+			// missing or inactive product, so only a NEW alert needs an active
+			// product.
 			var openedAt time.Time
 			err := tx.QueryRow(ctx, `
 				INSERT INTO products_schema.stock_alert (alert_id, product_id, status, stock_at_opening)
-				VALUES ($1, $2, $3, $4)
+				SELECT $1::uuid, p.product_id, $3::text, $4::int
+				FROM products_schema.product p
+				WHERE p.product_id = $2::uuid AND p.active
 				ON CONFLICT (product_id) WHERE status = 'OPEN' DO NOTHING
 				RETURNING opened_at`,
 				a.ID, a.ProductID, model.AlertStatusOpen, a.StockAtOpening).Scan(&openedAt)
@@ -80,29 +68,40 @@ func (r pgAlerts) OpenOnce(ctx context.Context, key string, a model.StockAlert) 
 				resultID = a.ID
 				return nil
 			}
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == pgForeignKeyViolation {
-				return out.ErrNotFound // the product does not exist
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return err
+			}
+
+			// Nothing was inserted. If the product has an OPEN alert, that is
+			// the answer, active or not.
+			var existing string
+			err = tx.QueryRow(ctx, `
+				SELECT alert_id::text FROM products_schema.stock_alert
+				WHERE product_id = $1 AND status = $2`, a.ProductID, model.AlertStatusOpen).Scan(&existing)
+			if err == nil {
+				resultID = existing
+				_, err = tx.Exec(ctx,
+					`UPDATE products_schema.idempotency_key SET resource_id = $2 WHERE idempotency_key = $1`, key, existing)
+				return err
 			}
 			if !errors.Is(err, pgx.ErrNoRows) {
 				return err
 			}
 
-			// The index refused the insert: the product has an OPEN alert.
-			var existing string
-			err = tx.QueryRow(ctx, `
-				SELECT alert_id::text FROM products_schema.stock_alert
-				WHERE product_id = $1 AND status = $2`, a.ProductID, model.AlertStatusOpen).Scan(&existing)
+			// No OPEN alert either: the product is missing or inactive, or its
+			// alert was resolved between the two statements (try again).
+			var active bool
+			err = tx.QueryRow(ctx,
+				`SELECT active FROM products_schema.product WHERE product_id = $1`, a.ProductID).Scan(&active)
 			if errors.Is(err, pgx.ErrNoRows) {
-				continue // resolved in between; try to open again
+				return out.ErrNotFound
 			}
 			if err != nil {
 				return err
 			}
-			resultID = existing
-			_, err = tx.Exec(ctx,
-				`UPDATE products_schema.idempotency_key SET resource_id = $2 WHERE idempotency_key = $1`, key, existing)
-			return err
+			if !active {
+				return out.ErrProductInactive
+			}
 		}
 		return fmt.Errorf("no OPEN alert could be inserted or found for product %s", a.ProductID)
 	})
