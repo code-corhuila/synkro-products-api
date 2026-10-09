@@ -51,6 +51,23 @@ func (r pgAlerts) OpenOnce(ctx context.Context, key string, a model.StockAlert) 
 
 	resultID := a.ID
 	id, claimed, err := r.db.createOnce(ctx, key, resourceAlert, a.ID, func(tx pgx.Tx) error {
+		// The product must exist and be active. FOR SHARE keeps a concurrent
+		// deactivation (an UPDATE of this row) from slipping in before this
+		// transaction commits. It runs after the key claim, so an exact
+		// retransmission never gets here and is answered from the key.
+		var active bool
+		err := tx.QueryRow(ctx,
+			`SELECT active FROM products_schema.product WHERE product_id = $1 FOR SHARE`, a.ProductID).Scan(&active)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return out.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if !active {
+			return out.ErrProductInactive
+		}
+
 		for range openAttempts {
 			var openedAt time.Time
 			err := tx.QueryRow(ctx, `

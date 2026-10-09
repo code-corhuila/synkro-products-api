@@ -59,6 +59,10 @@ func writeUseCaseError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, in.ErrReservationNotFound):
 		writeError(w, r, http.StatusNotFound, "NOT_FOUND", "Stock reservation not found")
 
+	case errors.Is(err, in.ErrProductInactive):
+		writeError(w, r, http.StatusUnprocessableEntity, "BUSINESS_RULE_VIOLATION",
+			"An alert cannot be opened for an inactive product",
+			errorDetail{Field: "productId", Message: "the product is inactive"})
 	case errors.Is(err, in.ErrStockAlertNotFound):
 		writeError(w, r, http.StatusNotFound, "NOT_FOUND", "Stock alert not found")
 

@@ -21,7 +21,9 @@ type StockAlertRepository interface {
 	//     second one is inserted. The new key is then spent on it.
 	//
 	// Otherwise inserts the alert and the key together. ErrNotFound if the
-	// product does not exist; ErrIdempotencyKeyReused if the key belongs to
+	// product does not exist; ErrProductInactive if it exists but is inactive
+	// (checked after the key claim, so a same-key retransmission is still
+	// answered from the key); ErrIdempotencyKeyReused if the key belongs to
 	// another resource type. The adapter fills OpenedAt.
 	OpenOnce(ctx context.Context, key string, a model.StockAlert) (alert model.StockAlert, created bool, err error)
 	// Atomically, under lock: applies model.StockAlert.Resolve(at). An
