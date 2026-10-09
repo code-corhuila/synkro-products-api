@@ -381,7 +381,7 @@ func TestGetStockReservation_ReturnsItAndItsFrozenPriceSurvivesAPriceChange(t *t
 		t.Fatalf("updating the price: %d %s", upd.status, upd.body)
 	}
 
-	r := api.do("GET", "/api/v1/stock-reservations/"+created.ReservationID, nil)
+	r := api.do("GET", "/api/v1/stock-reservations/"+created.ReservationID, nil, as(workflowToken)...)
 	if r.status != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", r.status, r.body)
 	}
@@ -529,6 +529,44 @@ func TestStockReservationEndpoints_CheckThePermissionBeforeLookingAtTheResource(
 	api := newTestAPI(t)
 
 	r := api.do("POST", "/api/v1/stock-reservations/not-a-uuid/release", nil, as(adminToken)...)
+
+	if r.status != http.StatusForbidden {
+		t.Errorf("expected 403 before the 404, got %d: %s", r.status, r.body)
+	}
+}
+
+func TestGetStockReservation_Returns403ToACallerWithoutStockReserve(t *testing.T) {
+	cases := map[string]string{
+		"ADMIN":                   adminToken,
+		"INVENTORY":               inventoryToken,
+		"SALESPERSON":             salespersonToken,
+		"the worker's token":      workerToken,
+		"stock:release only":      tokenWith([]string{"SERVICE"}, []string{"stock:release"}),
+		"no roles or permissions": testToken,
+	}
+	for name, token := range cases {
+		t.Run(name, func(t *testing.T) {
+			api := newTestAPI(t)
+			p := api.stocked("Mouse", 100, 10)
+			var created reservationJSON
+			api.reserve([]map[string]any{ln(p.ProductID, 3)}, "reserve-key-1").decode(t, &created)
+
+			r := api.do("GET", "/api/v1/stock-reservations/"+created.ReservationID, nil, as(token)...)
+
+			if r.status != http.StatusForbidden {
+				t.Fatalf("expected 403, got %d: %s", r.status, r.body)
+			}
+			if e := r.errorBody(t); e.Error != "FORBIDDEN" {
+				t.Errorf("unexpected error envelope: %+v", e)
+			}
+		})
+	}
+}
+
+func TestGetStockReservation_ChecksThePermissionBeforeLookingAtTheResource(t *testing.T) {
+	api := newTestAPI(t)
+
+	r := api.do("GET", "/api/v1/stock-reservations/not-a-uuid", nil, as(adminToken)...)
 
 	if r.status != http.StatusForbidden {
 		t.Errorf("expected 403 before the 404, got %d: %s", r.status, r.body)
