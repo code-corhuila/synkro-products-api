@@ -37,3 +37,7 @@ type StockAlertUseCases interface {
 	ResolveStockAlert(ctx context.Context, id string) (model.StockAlert, error)
 	ListStockAlerts(ctx context.Context, q ListStockAlertsQuery) (ListStockAlertsResult, error)
 }
+
+// ErrProductInactive: the product exists but is inactive, so no alert can be
+// opened for it (422 BUSINESS_RULE_VIOLATION, not 404).
+var ErrProductInactive = errors.New("product is inactive")
