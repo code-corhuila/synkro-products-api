@@ -56,7 +56,7 @@ func (a *testAPI) adjust(productID string, body any, key string) apiResponse {
 }
 
 func (a *testAPI) reserve(lines []map[string]any, key string) apiResponse {
-	return a.do("POST", "/api/v1/stock-reservations", map[string]any{"lines": lines}, "Idempotency-Key", key)
+	return a.do("POST", "/api/v1/stock-reservations", map[string]any{"lines": lines}, append(as(workflowToken), "Idempotency-Key", key)...)
 }
 
 func ln(productID string, qty int) map[string]any {
@@ -331,7 +331,7 @@ func TestCreateStockReservation_InvalidBodyIs400(t *testing.T) {
 	}
 	for i, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			r := api.do("POST", "/api/v1/stock-reservations", tc.body, "Idempotency-Key", "bad-body-key-"+string(rune('a'+i)))
+			r := api.do("POST", "/api/v1/stock-reservations", tc.body, append(as(workflowToken), "Idempotency-Key", "bad-body-key-"+string(rune('a'+i)))...)
 			if r.status != http.StatusBadRequest {
 				t.Fatalf("expected 400, got %d: %s", r.status, r.body)
 			}
@@ -349,7 +349,7 @@ func TestCreateStockReservation_InvalidBodyIs400(t *testing.T) {
 func TestCreateStockReservation_RequiresAnIdempotencyKey(t *testing.T) {
 	api := newTestAPI(t)
 	p := api.stocked("Mouse", 100, 10)
-	r := api.do("POST", "/api/v1/stock-reservations", map[string]any{"lines": []any{ln(p.ProductID, 1)}})
+	r := api.do("POST", "/api/v1/stock-reservations", map[string]any{"lines": []any{ln(p.ProductID, 1)}}, as(workflowToken)...)
 	if r.status != http.StatusBadRequest || r.errorBody(t).Details[0].Field != "Idempotency-Key" {
 		t.Fatalf("expected 400 naming Idempotency-Key, got %d: %s", r.status, r.body)
 	}
@@ -396,7 +396,7 @@ func TestStockReservation_UnknownOrMalformedIDIs404(t *testing.T) {
 	api := newTestAPI(t)
 	for _, id := range []string{"0192a000-0000-7000-8000-00000000dead", "not-a-uuid"} {
 		for _, req := range [][2]string{{"GET", "/api/v1/stock-reservations/" + id}, {"POST", "/api/v1/stock-reservations/" + id + "/release"}} {
-			r := api.do(req[0], req[1], nil)
+			r := api.do(req[0], req[1], nil, as(workflowToken)...)
 			if r.status != http.StatusNotFound || r.errorBody(t).Error != "NOT_FOUND" {
 				t.Errorf("%s %s: expected 404 NOT_FOUND, got %d: %s", req[0], req[1], r.status, r.body)
 			}
@@ -414,7 +414,7 @@ func TestReleaseStockReservation_RestoresStockAndIsIdempotent(t *testing.T) {
 	api.reserve([]map[string]any{ln(p1.ProductID, 3), ln(p2.ProductID, 4)}, "reserve-key-1").decode(t, &created)
 	path := "/api/v1/stock-reservations/" + created.ReservationID + "/release"
 
-	first := api.do("POST", path, nil)
+	first := api.do("POST", path, nil, as(workflowToken)...)
 	if first.status != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", first.status, first.body)
 	}
@@ -427,7 +427,7 @@ func TestReleaseStockReservation_RestoresStockAndIsIdempotent(t *testing.T) {
 		t.Fatalf("after release p1=%d p2=%d, want 10 and 4", api.stockOf(p1.ProductID), api.stockOf(p2.ProductID))
 	}
 
-	second := api.do("POST", path, nil)
+	second := api.do("POST", path, nil, as(workflowToken)...)
 	if second.status != http.StatusOK {
 		t.Fatalf("second release: expected 200, got %d: %s", second.status, second.body)
 	}
@@ -458,5 +458,79 @@ func TestCreateStockAdjustment_ReplayReportsTheStockTheOriginalLeft(t *testing.T
 	again.decode(t, &a)
 	if a.CurrentStock != 7 {
 		t.Errorf("replay currentStock %d, want 7 (what the original left; the product holds %d now)", a.CurrentStock, api.stockOf(p.ProductID))
+	}
+}
+
+// ─── Authorization of the reservation endpoints ────────────────────────
+
+// synkro-workflow's service token: the only holder of stock:reserve and
+// stock:release (authentication.md, "Service tokens").
+var workflowToken = tokenWith([]string{"SERVICE"}, []string{"customers:read", "stock:reserve", "stock:release", "sales:register"})
+
+func TestCreateStockReservation_Returns403ToACallerWithoutStockReserve(t *testing.T) {
+	cases := map[string]string{
+		"ADMIN":                   adminToken,
+		"INVENTORY":               inventoryToken,
+		"SALESPERSON":             salespersonToken,
+		"the worker's token":      workerToken,
+		"stock:release only":      tokenWith([]string{"SERVICE"}, []string{"stock:release"}),
+		"no roles or permissions": testToken,
+	}
+	for name, token := range cases {
+		t.Run(name, func(t *testing.T) {
+			api := newTestAPI(t)
+			p := api.stocked("Mouse", 100, 10)
+
+			r := api.do("POST", "/api/v1/stock-reservations", map[string]any{"lines": []any{ln(p.ProductID, 3)}},
+				append(as(token), "Idempotency-Key", "reserve-forbidden-1")...)
+
+			if r.status != http.StatusForbidden {
+				t.Fatalf("expected 403, got %d: %s", r.status, r.body)
+			}
+			if e := r.errorBody(t); e.Error != "FORBIDDEN" || e.TraceID == "" {
+				t.Errorf("unexpected error envelope: %+v", e)
+			}
+			if got := api.stockOf(p.ProductID); got != 10 {
+				t.Errorf("a forbidden call must reserve nothing, stock is %d", got)
+			}
+		})
+	}
+}
+
+func TestReleaseStockReservation_Returns403ToACallerWithoutStockRelease(t *testing.T) {
+	cases := map[string]string{
+		"ADMIN":                   adminToken,
+		"INVENTORY":               inventoryToken,
+		"SALESPERSON":             salespersonToken,
+		"the worker's token":      workerToken,
+		"stock:reserve only":      tokenWith([]string{"SERVICE"}, []string{"stock:reserve"}),
+		"no roles or permissions": testToken,
+	}
+	for name, token := range cases {
+		t.Run(name, func(t *testing.T) {
+			api := newTestAPI(t)
+			p := api.stocked("Mouse", 100, 10)
+			var created reservationJSON
+			api.reserve([]map[string]any{ln(p.ProductID, 3)}, "reserve-key-1").decode(t, &created)
+
+			r := api.do("POST", "/api/v1/stock-reservations/"+created.ReservationID+"/release", nil, as(token)...)
+
+			if r.status != http.StatusForbidden {
+				t.Fatalf("expected 403, got %d: %s", r.status, r.body)
+			}
+			if got := api.stockOf(p.ProductID); got != 7 {
+				t.Errorf("a forbidden call must release nothing, stock is %d, want 7", got)
+			}
+		})
+	}
+}
+
+func TestStockReservationEndpoints_CheckThePermissionBeforeLookingAtTheResource(t *testing.T) {
+	api := newTestAPI(t)
+
+	r := api.do("POST", "/api/v1/stock-reservations/not-a-uuid/release", nil, as(adminToken)...)
+
+	if r.status != http.StatusForbidden {
+		t.Errorf("expected 403 before the 404, got %d: %s", r.status, r.body)
 	}
 }
