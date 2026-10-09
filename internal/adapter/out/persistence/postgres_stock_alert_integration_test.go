@@ -483,3 +483,44 @@ func TestPostgres_StockAlert_ASameKeyReplayAfterTheProductIsDeactivatedReturnsTh
 		t.Errorf("created=%v err=%v alert=%+v", created, err, again)
 	}
 }
+
+// The active check guards only the insert of a new alert. A product
+// deactivated while its alert is OPEN gets that alert back for a new key,
+// and the key is spent on it, so the daily worker never sees a 422.
+func TestPostgres_StockAlert_ADifferentKeyForADeactivatedProductWithAnOpenAlertReturnsTheOpenOne(t *testing.T) {
+	pool := openDB(t)
+	db := NewPostgres(pool)
+	p := stockedProduct(t, db, pool, 1)
+	first := mustOpen(t, db, p.ID, 1)
+	deactivate(t, db, p)
+	nextKey := newKey()
+
+	got, created, err := db.StockAlerts().OpenOnce(ctxT(), nextKey, newAlert(t, p.ID, 1))
+
+	if err != nil || created || got != first {
+		t.Fatalf("created=%v err=%v alert=%+v, want %+v", created, err, got, first)
+	}
+	if rt, id := keyTarget(t, pool, nextKey); rt != "STOCK_ALERT" || id != first.ID {
+		t.Errorf("idempotency_key row: type=%s id=%s, want STOCK_ALERT %s", rt, id, first.ID)
+	}
+	if n := count(t, pool, `SELECT count(*) FROM products_schema.stock_alert WHERE product_id = $1`, p.ID); n != 1 {
+		t.Errorf("expected 1 alert row, got %d", n)
+	}
+}
+
+func TestPostgres_StockAlert_ADeactivatedProductWhoseAlertWasResolvedIsRefusedAgain(t *testing.T) {
+	pool := openDB(t)
+	db := NewPostgres(pool)
+	p := stockedProduct(t, db, pool, 1)
+	first := mustOpen(t, db, p.ID, 1)
+	deactivate(t, db, p)
+	if _, err := db.StockAlerts().Resolve(ctxT(), first.ID, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, err := db.StockAlerts().OpenOnce(ctxT(), newKey(), newAlert(t, p.ID, 1))
+
+	if !errors.Is(err, out.ErrProductInactive) {
+		t.Errorf("expected ErrProductInactive, got %v", err)
+	}
+}

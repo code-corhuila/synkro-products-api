@@ -272,3 +272,36 @@ func TestResolveStockAlert_StillWorksForAProductDeactivatedAfterwards(t *testing
 		t.Errorf("unexpected: %+v err=%v", a, err)
 	}
 }
+
+// The worker sends a new key every day. A product deactivated while its
+// alert is still OPEN must not turn every later run into a 422: the open
+// alert is returned as is. The active check only guards creating a new one.
+func TestOpenStockAlert_ADifferentKeyForADeactivatedProductWithAnOpenAlertReturnsTheOpenOne(t *testing.T) {
+	h := newAlertHarness(product("p1", 1, 100))
+	first, _ := h.svc.OpenStockAlert(context.Background(), openCmd("low-stock:p1:2026-10-08", "p1", 1))
+	h.products.byID["p1"] = inactiveProduct("p1")
+
+	next, err := h.svc.OpenStockAlert(context.Background(), openCmd("low-stock:p1:2026-10-09", "p1", 1))
+
+	if err != nil {
+		t.Fatalf("expected the open alert, got %v", err)
+	}
+	if next.Created || next.Alert.ID != first.Alert.ID {
+		t.Errorf("expected the open alert %s with Created=false, got %+v", first.Alert.ID, next)
+	}
+}
+
+// Once that alert is resolved nothing is OPEN any more, so the inactive
+// product is refused again.
+func TestOpenStockAlert_ADeactivatedProductWhoseAlertWasResolvedIsRefusedAgain(t *testing.T) {
+	h := newAlertHarness(product("p1", 1, 100))
+	first, _ := h.svc.OpenStockAlert(context.Background(), openCmd("low-stock:p1:2026-10-08", "p1", 1))
+	h.products.byID["p1"] = inactiveProduct("p1")
+	h.svc.ResolveStockAlert(context.Background(), first.Alert.ID)
+
+	_, err := h.svc.OpenStockAlert(context.Background(), openCmd("low-stock:p1:2026-10-09", "p1", 1))
+
+	if !errors.Is(err, in.ErrProductInactive) {
+		t.Errorf("expected ErrProductInactive, got %v", err)
+	}
+}
