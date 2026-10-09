@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -44,6 +45,7 @@ func newTestAPI(t *testing.T) *testAPI {
 		usecase.NewProductService(mem.Products(), mem.Categories(), newID),
 		usecase.NewCategoryService(mem.Categories(), newID),
 		usecase.NewStockService(mem.StockAdjustments(), mem.StockReservations(), newID),
+		usecase.NewStockAlertService(mem.StockAlerts(), newID, time.Now),
 	)
 	srv := httptest.NewServer(router)
 	t.Cleanup(srv.Close)
@@ -95,7 +97,7 @@ func (a *testAPI) do(method, path string, body any, headers ...string) apiRespon
 	if err != nil {
 		a.t.Fatal(err)
 	}
-	req.Header.Set("Authorization", "Bearer "+testToken)
+	req.Header.Set("Authorization", "Bearer "+adminToken)
 	req.Header.Set("Content-Type", "application/json")
 	for i := 0; i+1 < len(headers); i += 2 {
 		req.Header.Set(headers[i], headers[i+1])

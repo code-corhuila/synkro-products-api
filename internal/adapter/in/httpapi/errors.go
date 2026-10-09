@@ -59,6 +59,13 @@ func writeUseCaseError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, in.ErrReservationNotFound):
 		writeError(w, r, http.StatusNotFound, "NOT_FOUND", "Stock reservation not found")
 
+	case errors.Is(err, in.ErrProductInactive):
+		writeError(w, r, http.StatusUnprocessableEntity, "BUSINESS_RULE_VIOLATION",
+			"An alert cannot be opened for an inactive product",
+			errorDetail{Field: "productId", Message: "the product is inactive"})
+	case errors.Is(err, in.ErrStockAlertNotFound):
+		writeError(w, r, http.StatusNotFound, "NOT_FOUND", "Stock alert not found")
+
 	case errors.Is(err, in.ErrProductNotFound):
 		writeError(w, r, http.StatusNotFound, "NOT_FOUND", "Product not found")
 	case errors.Is(err, in.ErrCategoryNotFound):
@@ -84,6 +91,8 @@ func writeUseCaseError(w http.ResponseWriter, r *http.Request, err error) {
 		writeValidationError(w, r, []errorDetail{{Field: "priceCents", Message: "must be greater than 0"}})
 	case errors.Is(err, model.ErrDeltaZero):
 		writeValidationError(w, r, []errorDetail{{Field: "delta", Message: "must not be zero"}})
+	case errors.Is(err, model.ErrStockAtOpeningNegative):
+		writeValidationError(w, r, []errorDetail{{Field: "stockAtOpening", Message: "must not be negative"}})
 	case errors.Is(err, model.ErrReasonRequired):
 		writeValidationError(w, r, []errorDetail{{Field: "reason", Message: "required"}})
 	case errors.Is(err, model.ErrNoLines), errors.Is(err, model.ErrDuplicateProduct), errors.Is(err, model.ErrQuantityNotPositive):

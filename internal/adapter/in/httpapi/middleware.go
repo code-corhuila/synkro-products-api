@@ -71,20 +71,34 @@ func looksLikeJWT(token string) bool {
 // as trustworthy as the caller. It reports false for a token without a
 // UUID sub, which cannot be stored in stock_adjustment.adjusted_by.
 func subjectFrom(r *http.Request) (string, bool) {
+	return canonicalUUID(claimsFrom(r).Sub)
+}
+
+// tokenClaims are the claims of the Bearer token this service authorizes
+// on (authentication.md, "Token shape").
+type tokenClaims struct {
+	Sub         string   `json:"sub"`
+	Roles       []string `json:"roles"`
+	Permissions []string `json:"permissions"`
+}
+
+// claimsFrom decodes the payload of the Bearer token. Like subjectFrom it
+// verifies nothing: the signature is still not checked, so a 403 here is
+// only as trustworthy as the caller until real RS256 verification lands.
+// A token that cannot be decoded yields no claims, i.e. no access.
+func claimsFrom(r *http.Request) tokenClaims {
 	token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		return "", false
+		return tokenClaims{}
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(parts[1], "="))
 	if err != nil {
-		return "", false
+		return tokenClaims{}
 	}
-	var claims struct {
-		Sub string `json:"sub"`
-	}
+	var claims tokenClaims
 	if json.Unmarshal(payload, &claims) != nil {
-		return "", false
+		return tokenClaims{}
 	}
-	return canonicalUUID(claims.Sub)
+	return claims
 }
