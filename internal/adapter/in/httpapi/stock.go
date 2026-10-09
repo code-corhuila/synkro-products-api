@@ -3,6 +3,7 @@ package httpapi
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -161,6 +162,10 @@ func readLines(r *http.Request) (lines []in.ReservationLineCommand, details []er
 }
 
 func (h stockHandlers) createReservation(w http.ResponseWriter, r *http.Request) {
+	if !slices.Contains(claimsFrom(r).Permissions, permStockReserve) {
+		forbid(w, r)
+		return
+	}
 	key, details := requireIdempotencyKey(r)
 	lines, bodyDetails := readLines(r)
 	if details = append(details, bodyDetails...); len(details) > 0 {
@@ -181,6 +186,8 @@ func (h stockHandlers) createReservation(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusCreated, toReservationResponse(res.Reservation))
 }
 
+// getReservation only requires a well-formed token, as before: the contract
+// says "the workflow's service token" but names no permission for this read.
 func (h stockHandlers) getReservation(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r)
 	if !ok {
@@ -196,6 +203,10 @@ func (h stockHandlers) getReservation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h stockHandlers) releaseReservation(w http.ResponseWriter, r *http.Request) {
+	if !slices.Contains(claimsFrom(r).Permissions, permStockRelease) {
+		forbid(w, r)
+		return
+	}
 	id, ok := pathID(r)
 	if !ok {
 		writeUseCaseError(w, r, in.ErrReservationNotFound)
@@ -208,3 +219,11 @@ func (h stockHandlers) releaseReservation(w http.ResponseWriter, r *http.Request
 	}
 	writeJSON(w, http.StatusOK, toReservationResponse(res))
 }
+
+// Held only by synkro-workflow's service token (authentication.md). The
+// permission is checked, not a role (security-rules.md). GET of a single
+// reservation is deliberately not checked: see the note on getReservation.
+const (
+	permStockReserve = "stock:reserve"
+	permStockRelease = "stock:release"
+)
