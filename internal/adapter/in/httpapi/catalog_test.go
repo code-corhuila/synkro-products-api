@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,15 +18,14 @@ import (
 	"github.com/code-corhuila/synkro-products-api/internal/domain/model"
 )
 
-// A JWT-shaped token: requireAuth only checks the shape. Its sub is a UUID
+// A genuine RS256 token signed with the test key. Its sub is a UUID
 // because the stock-adjustment endpoint records it as adjustedBy.
 const testSub = "0192a000-0000-7000-8000-0000000000a1"
 
 var testToken = tokenWithSub(testSub)
 
 func tokenWithSub(sub string) string {
-	enc := base64.RawURLEncoding.EncodeToString
-	return enc([]byte(`{"alg":"RS256"}`)) + "." + enc([]byte(`{"sub":"`+sub+`"}`)) + ".c2ln"
+	return rs256Token(validClaims(sub, nil, nil))
 }
 
 type testAPI struct {
@@ -41,7 +39,12 @@ func newTestAPI(t *testing.T) *testAPI {
 	t.Helper()
 	mem := persistence.NewMemory()
 	newID := func() string { return uuid.Must(uuid.NewV7()).String() }
+	verifier, err := NewRS256Verifier(publicKeyPEM(testKey), time.Now)
+	if err != nil {
+		t.Fatal(err)
+	}
 	router := NewRouter(
+		verifier,
 		usecase.NewProductService(mem.Products(), mem.Categories(), newID),
 		usecase.NewCategoryService(mem.Categories(), newID),
 		usecase.NewStockService(mem.StockAdjustments(), mem.StockReservations(), newID),
