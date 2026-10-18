@@ -5,7 +5,7 @@ services:
       dockerfile: deploy/Dockerfile
     environment:
       HTTP_PORT: "8080"
-      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?set JWT_PUBLIC_KEY - the PEM public key of synkro-auth-api, see .env.example}
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL - see .env.example}
     expose: ["8080"]
     networks: [platform]

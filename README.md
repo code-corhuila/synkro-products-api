@@ -12,15 +12,41 @@ The service needs a PostgreSQL instance with `products_schema` created by
 migrations, reached as the `products_app` role:
 
 ```bash
-DATABASE_URL="postgres://products_app:<password>@localhost:5432/postgres?sslmode=disable" go run ./cmd/products-api
+DATABASE_URL="postgres://products_app:<password>@localhost:5432/postgres?sslmode=disable" \
+JWT_PUBLIC_KEY_FILE=./synkro-auth-public.pem \
+go run ./cmd/products-api
 ```
 
 The service listens on `:8080` (override with `HTTP_PORT`). It refuses to
-start without `DATABASE_URL`. Verify it:
+start without `DATABASE_URL` or without a valid JWT public key (see
+[Authentication](#authentication)). Verify it:
 
 ```bash
 curl http://localhost:8080/health
 ```
+
+## Authentication
+
+Every route except `GET /health` requires `Authorization: Bearer <JWT>`, and
+this service verifies the token itself (ADR-006): the gateway only checks
+that a credential is present, so it does not replace this validation.
+
+- **Algorithm:** only `RS256`. `none`, `HS256` and any other algorithm are
+  rejected whatever the token header says.
+- **Key:** the public key of `synkro-auth-api`, as PEM in `JWT_PUBLIC_KEY`
+  (newlines may be written as `\n`) or as a file path in
+  `JWT_PUBLIC_KEY_FILE` - exactly one of them. RSA, at least 2048 bits. A
+  private key is refused. The service does not start without a valid key.
+- **Claims:** `exp` is required and `sub`, `iat`, `jti`, `roles` and
+  `permissions` must be present. Clock skew of 30 s is tolerated on `exp`,
+  `nbf` and `iat`. A person's `sub` is a UUID; a `SERVICE` token's `sub` is the
+  service name.
+- **Failures:** a missing, malformed, expired, wrongly signed or non-RS256
+  token is `401 UNAUTHORIZED` with one generic message, so the response does
+  not say which check failed. A valid token without the role or permission is
+  `403 FORBIDDEN`.
+- Identity, roles and permissions come only from the verified claims; any
+  `X-User-*` header is ignored.
 
 ## Running the tests
 
