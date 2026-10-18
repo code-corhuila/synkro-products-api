@@ -43,7 +43,14 @@ func main() {
 	defer pool.Close()
 
 	db := persistence.NewPostgres(pool)
+	verifier, err := httpapi.NewRS256Verifier(cfg.JWTPublicKey, time.Now)
+	if err != nil {
+		logger.Error("invalid JWT public key", "error", err)
+		os.Exit(1)
+	}
+
 	router := httpapi.NewRouter(
+		verifier,
 		usecase.NewProductService(db.Products(), db.Categories(), newID),
 		usecase.NewCategoryService(db.Categories(), newID),
 		usecase.NewStockService(db.StockAdjustments(), db.StockReservations(), newID),
