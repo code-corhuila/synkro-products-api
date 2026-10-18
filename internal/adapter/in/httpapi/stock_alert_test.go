@@ -1,8 +1,6 @@
 package httpapi
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -23,16 +21,18 @@ type alertPageJSON struct {
 	Meta pageMeta         `json:"meta"`
 }
 
-// tokenWith builds a JWT-shaped token carrying the claims the alert
-// endpoints authorize on (the signature is not verified, see requireAuth).
+// tokenWith builds a genuine RS256 token carrying the claims the alert
+// endpoints authorize on.
 func tokenWith(roles, permissions []string) string {
+	// A service token's sub is the service name, not a user id.
+	if len(roles) == 1 && roles[0] == "SERVICE" {
+		return tokenWithClaims("synkro-worker", roles, permissions)
+	}
 	return tokenWithClaims(testSub, roles, permissions)
 }
 
 func tokenWithClaims(sub string, roles, permissions []string) string {
-	enc := base64.RawURLEncoding.EncodeToString
-	payload, _ := json.Marshal(map[string]any{"sub": sub, "roles": roles, "permissions": permissions})
-	return enc([]byte(`{"alg":"RS256"}`)) + "." + enc(payload) + ".c2ln"
+	return rs256Token(validClaims(sub, roles, permissions))
 }
 
 var (
