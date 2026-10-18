@@ -46,6 +46,7 @@ func main() {
 	router := httpapi.NewRouter(
 		usecase.NewProductService(db.Products(), db.Categories(), newID),
 		usecase.NewCategoryService(db.Categories(), newID),
+		usecase.NewStockService(db.StockAdjustments(), db.StockReservations(), newID),
 	)
 
 	srv := &http.Server{
