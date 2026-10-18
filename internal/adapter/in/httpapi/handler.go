@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"github.com/code-corhuila/synkro-products-api/internal/application/port/in"
 )
 
 type healthResponse struct {
@@ -14,19 +16,32 @@ type healthResponse struct {
 
 // NewRouter wires every route of this service. /health is public
 // (cross-cutting.md §4); every other route is wrapped by the
-// default-deny middleware added in step 3.
-func NewRouter() http.Handler {
-	// placeholder route so the 401 test has something to hit; real
-	// product routes arrive with HU-PRO-01
+// default-deny middleware.
+func NewRouter(products in.ProductUseCases, categories in.CategoryUseCases) http.Handler {
+	p := productHandlers{products}
+	c := categoryHandlers{categories}
+
 	protected := http.NewServeMux()
-	protected.HandleFunc("GET /api/v1/products", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotImplemented)
-	})
+	protected.HandleFunc("GET /api/v1/products", p.list)
+	protected.HandleFunc("POST /api/v1/products", p.create)
+	protected.HandleFunc("GET /api/v1/products/{id}", p.get)
+	protected.HandleFunc("PUT /api/v1/products/{id}", p.update)
+	protected.HandleFunc("DELETE /api/v1/products/{id}", p.deactivate)
+
+	// "categories" is a literal segment, so these patterns are more
+	// specific than /products/{id} and win over it.
+	protected.HandleFunc("GET /api/v1/products/categories", c.list)
+	protected.HandleFunc("POST /api/v1/products/categories", c.create)
+	protected.HandleFunc("PUT /api/v1/products/categories/{id}", c.rename)
+	protected.HandleFunc("DELETE /api/v1/products/categories/{id}", c.deactivate)
+
+	protected.HandleFunc("/", writeNotFound)
 
 	root := http.NewServeMux()
 	root.HandleFunc("GET /health", handleHealth)
 	root.Handle("/api/v1/", requireAuth(protected))
-	return root
+	root.HandleFunc("/", writeNotFound)
+	return withCorrelation(root)
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
