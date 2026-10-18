@@ -3,13 +3,11 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
 func TestHealth_ReturnsOkWithNoToken(t *testing.T) {
-	srv := httptest.NewServer(NewRouter())
-	defer srv.Close()
+	srv := newTestAPI(t).srv
 
 	resp, err := http.Get(srv.URL + "/health")
 	if err != nil {
@@ -37,8 +35,7 @@ func TestHealth_ReturnsOkWithNoToken(t *testing.T) {
 }
 
 func TestProtectedRoute_Returns401WithNoToken(t *testing.T) {
-	srv := httptest.NewServer(NewRouter())
-	defer srv.Close()
+	srv := newTestAPI(t).srv
 
 	resp, err := http.Get(srv.URL + "/api/v1/products")
 	if err != nil {
@@ -66,8 +63,7 @@ func TestProtectedRoute_Returns401WithNoToken(t *testing.T) {
 }
 
 func TestProtectedRoute_Returns401WithMalformedToken(t *testing.T) {
-	srv := httptest.NewServer(NewRouter())
-	defer srv.Close()
+	srv := newTestAPI(t).srv
 
 	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/api/v1/products", nil)
 	req.Header.Set("Authorization", "Bearer not-a-real-token")
