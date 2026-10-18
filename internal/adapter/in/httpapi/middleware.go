@@ -2,8 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -31,74 +29,53 @@ func traceIDFrom(r *http.Request) string {
 	return id
 }
 
-// requireAuth is a deliberately minimal default-deny gate: it rejects
-// every request that lacks a well-formed Authorization header. It does
-// NOT validate a real RS256 signature: any JWT-shaped Bearer token gets
-// through. Its only job is to make sure nothing is reachable by
-// accident.
-func requireAuth(next http.Handler) http.Handler {
+type claimsKey struct{}
+
+// requireAuth is the authentication gate of every /api/v1 route: it
+// verifies the Bearer token once (RS256 signature, exp, sub; see
+// RS256Verifier) and stores the verified claims in the request context.
+// Everything downstream (subjectFrom, claimsFrom, RBAC) reads those
+// claims and never touches the Authorization header again. Whatever is
+// wrong with the credential, the answer is the same 401.
+func requireAuth(verifier TokenVerifier, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if !ok || !looksLikeJWT(token) {
-			writeError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "a valid Authorization header is required")
+		if !ok {
+			unauthorized(w, r)
 			return
 		}
-		// A real token still gets no further validation in this story —
-		// any JWT-shaped Bearer token passes through. Real RS256
-		// verification is explicitly out of scope here.
-		next.ServeHTTP(w, r)
+		claims, err := verifier.Verify(token)
+		if err != nil {
+			unauthorized(w, r)
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), claimsKey{}, claims)))
 	})
 }
 
-// looksLikeJWT only checks the compact-serialization shape
-// (header.payload.signature, all non-empty). It decodes nothing.
-func looksLikeJWT(token string) bool {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return false
-	}
-	for _, p := range parts {
-		if p == "" {
-			return false
-		}
-	}
-	return true
+func unauthorized(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("WWW-Authenticate", "Bearer")
+	writeError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "Missing or invalid authentication token")
 }
 
-// subjectFrom reads the sub claim of the Bearer token as a UUID. Like
-// requireAuth it verifies nothing: the signature is still not checked
-// (real RS256 verification is deferred), so until then adjustedBy is only
-// as trustworthy as the caller. It reports false for a token without a
-// UUID sub, which cannot be stored in stock_adjustment.adjusted_by.
+// tokenClaims are the verified claims of the Bearer token this service
+// authorizes on (authentication.md, "Token shape").
+type tokenClaims struct {
+	Sub         string
+	Roles       []string
+	Permissions []string
+}
+
+// claimsFrom returns the claims requireAuth verified for this request. A
+// request that did not pass through requireAuth has none, i.e. no access.
+func claimsFrom(r *http.Request) tokenClaims {
+	claims, _ := r.Context().Value(claimsKey{}).(tokenClaims)
+	return claims
+}
+
+// subjectFrom reads the verified sub as a UUID. It reports false for a
+// subject that is not one (a service token's sub is a service name), which
+// cannot be stored in stock_adjustment.adjusted_by.
 func subjectFrom(r *http.Request) (string, bool) {
 	return canonicalUUID(claimsFrom(r).Sub)
-}
-
-// tokenClaims are the claims of the Bearer token this service authorizes
-// on (authentication.md, "Token shape").
-type tokenClaims struct {
-	Sub         string   `json:"sub"`
-	Roles       []string `json:"roles"`
-	Permissions []string `json:"permissions"`
-}
-
-// claimsFrom decodes the payload of the Bearer token. Like subjectFrom it
-// verifies nothing: the signature is still not checked, so a 403 here is
-// only as trustworthy as the caller until real RS256 verification lands.
-// A token that cannot be decoded yields no claims, i.e. no access.
-func claimsFrom(r *http.Request) tokenClaims {
-	token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return tokenClaims{}
-	}
-	payload, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(parts[1], "="))
-	if err != nil {
-		return tokenClaims{}
-	}
-	var claims tokenClaims
-	if json.Unmarshal(payload, &claims) != nil {
-		return tokenClaims{}
-	}
-	return claims
 }
