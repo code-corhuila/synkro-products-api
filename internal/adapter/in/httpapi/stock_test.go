@@ -465,7 +465,7 @@ func TestCreateStockAdjustment_ReplayReportsTheStockTheOriginalLeft(t *testing.T
 
 // synkro-workflow's service token: the only holder of stock:reserve and
 // stock:release (authentication.md, "Service tokens").
-var workflowToken = tokenWith([]string{"SERVICE"}, []string{"customers:read", "stock:reserve", "stock:release", "sales:register"})
+var workflowToken = tokenWithClaims("synkro-workflow", []string{"SERVICE"}, []string{"customers:read", "stock:reserve", "stock:release", "sales:register"})
 
 func TestCreateStockReservation_Returns403ToACallerWithoutStockReserve(t *testing.T) {
 	cases := map[string]string{
