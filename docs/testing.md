@@ -25,6 +25,22 @@ go test -tags=integration -count=1 -coverpkg=./... -coverprofile=coverage.out ./
 python3 scripts/check-coverage.py coverage.out
 ```
 
+## Stock adjustment author
+
+`internal/adapter/in/httpapi/stock_adjustment_author_test.go` proves, over
+real HTTP with a valid body, that `adjustedBy` of a stock adjustment is the
+verified `sub` of the token: an INVENTORY token that sends another user's id
+as `adjustedBy` is recorded under its own `sub`, and a token with an invalid
+signature (other RSA key, tampered signature, `alg: none`, edited payload,
+expired) that carries another user's `sub` answers 401 and leaves no
+adjustment, no stock change and no idempotency key. The in-memory repository
+is read back for the stored author.
+
+`stock_adjustment_author_integration_test.go` (build tag `integration`) runs the
+same two obligations against real PostgreSQL as `products_app` and reads
+`adjusted_by`, the row counts, the stock and the idempotency key straight from
+`products_schema`.
+
 `test/products-db/` is a vendored copy of `synkro-products-db`'s
 migrations (that repository is private, so CI cannot check it out). After
 a migration merges there, refresh the copy with
