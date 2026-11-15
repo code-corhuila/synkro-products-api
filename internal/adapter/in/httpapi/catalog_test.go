@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/code-corhuila/synkro-products-api/internal/adapter/out/persistence"
+	"github.com/code-corhuila/synkro-products-api/internal/application/port/in"
 	"github.com/code-corhuila/synkro-products-api/internal/application/usecase"
 	"github.com/code-corhuila/synkro-products-api/internal/domain/model"
 )
@@ -35,7 +36,14 @@ type testAPI struct {
 	n   int
 }
 
+// newTestAPI wires the API with an explicitly healthy store, so every
+// existing test keeps exercising the routes it was written for.
 func newTestAPI(t *testing.T) *testAPI {
+	t.Helper()
+	return newTestAPIWithHealth(t, healthyFixture{})
+}
+
+func newTestAPIWithHealth(t *testing.T, health in.HealthUseCases) *testAPI {
 	t.Helper()
 	mem := persistence.NewMemory()
 	newID := func() string { return uuid.Must(uuid.NewV7()).String() }
@@ -49,6 +57,7 @@ func newTestAPI(t *testing.T) *testAPI {
 		usecase.NewCategoryService(mem.Categories(), newID),
 		usecase.NewStockService(mem.StockAdjustments(), mem.StockReservations(), newID),
 		usecase.NewStockAlertService(mem.StockAlerts(), newID, time.Now),
+		health,
 	)
 	srv := httptest.NewServer(router)
 	t.Cleanup(srv.Close)
