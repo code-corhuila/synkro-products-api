@@ -1,0 +1,66 @@
+{
+  "started_utc": "2026-11-15T01:22:03.911251+00:00",
+  "go_image": "golang:1.26.9-alpine3.23",
+  "db_source_commit": "2a58ab08493080cc9af22cab72d7f2f981d0c143",
+  "api_commit": "c453a8e36a717b6635c4942ab0d4a8b93d363731",
+  "passed": true,
+  "applied_versions": 20,
+  "coverage": {
+    "domain": {
+      "covered": 46,
+      "statements": 46,
+      "percentage": 100.0,
+      "minimum": 90,
+      "passed": true
+    },
+    "application": {
+      "covered": 160,
+      "statements": 177,
+      "percentage": 90.4,
+      "minimum": 80,
+      "passed": true
+    },
+    "infrastructure": {
+      "covered": 991,
+      "statements": 1084,
+      "percentage": 91.42,
+      "minimum": 60,
+      "passed": true
+    },
+    "global": {
+      "covered": 1219,
+      "statements": 1356,
+      "percentage": 89.9,
+      "minimum": 80,
+      "passed": true
+    }
+  },
+  "source_fixture_matches_verified_db": true,
+  "finished_utc": "2026-11-15T01:22:27.828703+00:00",
+  "remaining_containers": [],
+  "remaining_networks": [],
+  "evidence_hashes": {
+    "coverage.out": "454a956a9c62872e982837ef0b69cc5ca42fcdaea6845f8019d091fe1cf4feb1",
+    "domain-imports.txt": "6389e4f999dfa127f6314b1e31ecbc0224b0863ba71ce941ac3a4b15ebc86230",
+    "integration.jsonl": "5c5b75a00521aaf7bceb1508cb42d5d1cf3175d63e19eb9812dccda399647f08",
+    "migrations.log": "3034736225f998b3276d21382720faa223729e3486eeb7af7cad046c57070d4d",
+    "runner.log": "f0ace6000e5f1c69c2f8de32fee3125822fa798480a8cb4ee168d84fb11aa2c2",
+    "unit.jsonl": "6242b2c27c6ad13206d8ebac30b225eb076dbfea74d375f3cabfce405589b5ca"
+  },
+  "stages": {
+    "unit": {
+      "passing_test_and_subtest_events": 350,
+      "top_level_tests": 219,
+      "failed": [],
+      "skipped_events": 56
+    },
+    "integration": {
+      "passing_test_and_subtest_events": 421,
+      "top_level_tests": 282,
+      "failed": [],
+      "skipped_events": 0
+    }
+  },
+  "interpretation": "Local Linux CI-equivalent: common files, build, vet including integration, unit stage, domain architecture, fresh vendored PostgreSQL migration, full integration and coverage gates. GitHub Actions did not execute because account billing is locked; no waiver or remote success is claimed.",
+  "windows_unit_attempts": "Two later unit-only Windows runs were prevented from starting httpapi.test.exe (Access is denied), with no assertion failure. No Windows security setting was altered. The same unit stage passed in this owned Linux environment; the previously recorded complete Windows integration suite passed."
+}

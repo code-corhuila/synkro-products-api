@@ -1,0 +1,176 @@
+{
+  "story": "HU-PRO-15 / synkro-docs#317",
+  "scope": "Fresh local execution of the main proposal. Actual QA merges are source evidence; this is not an actual main integration, a persistent deployment, a tag or HU/debt closure.",
+  "promotion": {
+    "baseline": "8c04934ae5b51417a0b88506cc59734ef7913e64",
+    "source": "4f0f15be88156ed86ec6755d679721ea026d71f0",
+    "qa_previous": "22245634d2f10a5667899a24d5c1511d4f3a0891",
+    "branch": "release/products-store-health",
+    "expected_picks": 6,
+    "picks": [
+      "17e271c8f5b20596d83ccafb2adb879e69da009f",
+      "aceb430c47a70a647f93efe7ae5664b56a42455f",
+      "936ed4480694dc37aaacef7820bedeebfdd6e043",
+      "e46ac534638e34ec56be55ab14107ce93f2599ac",
+      "5f6e1095350e2b873ff3f0797090ce011948b209",
+      "f04b0c4952b2e197f8b6af44ef8feba8e2781b88"
+    ],
+    "trail": [
+      {
+        "source": "17e271c8f5b20596d83ccafb2adb879e69da009f",
+        "target": "93be6cd620a8cb9659868a9e4d1a865695832af0",
+        "subject": "test(health): specify bounded store probe before implementation"
+      },
+      {
+        "source": "aceb430c47a70a647f93efe7ae5664b56a42455f",
+        "target": "49e8d43fcdeb2622ba7e9304cce052bffbdd7799",
+        "subject": "feat(health): report bounded Products store availability"
+      },
+      {
+        "source": "936ed4480694dc37aaacef7820bedeebfdd6e043",
+        "target": "73ce87d7cab8ea4ddf76f19f994d39eaafd4c252",
+        "subject": "docs(health): record complete Linux validation and delivery gates"
+      },
+      {
+        "source": "e46ac534638e34ec56be55ab14107ce93f2599ac",
+        "target": "a4a1bc32c347e48c0c7672aff438d58e4fa7a33d",
+        "subject": "chore(test): pin merged Products DB revision"
+      },
+      {
+        "source": "5f6e1095350e2b873ff3f0797090ce011948b209",
+        "target": "7037e947c2463d9e765bfba31a7ba4177a179e14",
+        "subject": "docs(qa): record Products API promotion evidence"
+      },
+      {
+        "source": "f04b0c4952b2e197f8b6af44ef8feba8e2781b88",
+        "target": "47c8e9dbe8e1e8240d7c7376ff1bcaadcdc6cd5e",
+        "subject": "chore(qa): pin integrated Products DB schema"
+      }
+    ],
+    "candidate": "47c8e9dbe8e1e8240d7c7376ff1bcaadcdc6cd5e",
+    "tree_identical_to_integrated_qa": true
+  },
+  "source_comparison": {
+    "source": "4f0f15be88156ed86ec6755d679721ea026d71f0",
+    "candidate": "47c8e9dbe8e1e8240d7c7376ff1bcaadcdc6cd5e",
+    "tree_identical_to_source": true,
+    "protected_codeowners_unchanged": true,
+    "historical_sql_unchanged": []
+  },
+  "required_approval": "ariel5253 on the actual delivered main head; no QA/develop approval transfers. CODEOWNERS unchanged.",
+  "billing_disposition": "Owner explicitly instructed on 2026-11-14 America/Bogota to disregard the account billing impediment for this delivery only. Unstarted jobs are not passing checks; other review, integrity, tests and branch requirements remain.",
+  "exclusions": "HU-DOCS-98 excluded/untouched. TD-012 remains open/excluded. TD-018 retains five open residual items, SergioAndres17 and no review date.",
+  "linux_ci": {
+    "started_utc": "2026-11-15T02:37:35.063918+00:00",
+    "go_image": "golang:1.26.9-alpine3.23",
+    "db_source_commit": "89cd9a670d3e540c3cc524411ff77c058f1b8960",
+    "api_commit": "47c8e9dbe8e1e8240d7c7376ff1bcaadcdc6cd5e",
+    "passed": true,
+    "applied_versions": 20,
+    "coverage": {
+      "domain": {
+        "covered": 46,
+        "statements": 46,
+        "percentage": 100.0,
+        "minimum": 90,
+        "passed": true
+      },
+      "application": {
+        "covered": 160,
+        "statements": 177,
+        "percentage": 90.4,
+        "minimum": 80,
+        "passed": true
+      },
+      "infrastructure": {
+        "covered": 991,
+        "statements": 1084,
+        "percentage": 91.42,
+        "minimum": 60,
+        "passed": true
+      },
+      "global": {
+        "covered": 1219,
+        "statements": 1356,
+        "percentage": 89.9,
+        "minimum": 80,
+        "passed": true
+      }
+    },
+    "source_fixture_matches_verified_db": true,
+    "finished_utc": "2026-11-15T02:38:11.762973+00:00",
+    "remaining_containers": [],
+    "remaining_networks": [],
+    "evidence_hashes": {
+      "coverage.out": "759672d7f9f5d507baf98de8d37f3ea164a89cc00aa924af07a121291496fdde",
+      "domain-imports.txt": "6389e4f999dfa127f6314b1e31ecbc0224b0863ba71ce941ac3a4b15ebc86230",
+      "integration.jsonl": "8ce7a1e67647c27abe1237a22dbfc1624798132cd82dcb347ced483804b0c509",
+      "migrations.log": "e642458642afc46a31fa9716efeb37ca2ac2d23d51ec4a90fec94bfb1fc61ef4",
+      "runner.log": "1525b2f29ad9779801ecd237cb1c1ad66f600f326ad2cc4281bbdfc9d1d1d1ce",
+      "unit.jsonl": "a1e71ac0c4f4ed517513fdbb6d3d194bbe48a87f7a918e85765a95a4da4db40c"
+    },
+    "stages": {
+      "unit": {
+        "top_level_tests": 219,
+        "passing_test_and_subtest_events": 350,
+        "failed": [],
+        "skipped_events": 56
+      },
+      "integration": {
+        "top_level_tests": 282,
+        "passing_test_and_subtest_events": 421,
+        "failed": [],
+        "skipped_events": 0
+      }
+    }
+  },
+  "format": {
+    "scope": "All committed Go blobs, LF as checked out on Linux; no working-copy CRLF noise",
+    "files_checked": 70,
+    "unformatted": []
+  },
+  "fixture": {
+    "source_commit": "89cd9a670d3e540c3cc524411ff77c058f1b8960",
+    "blobs": {
+      "01_ddl/00_extensions/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/01_schemas/V001__create_schema_products.sql": "f87fefac50463a513f851cd5c19e83e2cc5aa8f3",
+      "01_ddl/02_types/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/03_tables/V004__create_category.sql": "7366e09472a1f380a193cd77a7b87fe6b6c440db",
+      "01_ddl/03_tables/V005__create_product.sql": "53ec775ad6f74c64cf4f5968a9b646a4065006d4",
+      "01_ddl/03_tables/V008__create_idempotency_key.sql": "1c0461b4b3ed1491fdb19269d448c935bb552a2b",
+      "01_ddl/03_tables/V009__create_stock_adjustment.sql": "847764c1e9fc81acd61ce9bee268649f07d56f64",
+      "01_ddl/03_tables/V010__create_stock_reservation.sql": "c0b76b5049add1a15e9c3a9be536b082f31ddefb",
+      "01_ddl/03_tables/V011__create_stock_reservation_line.sql": "28414c529053c854ca90f93a94b53d4d3ab64be4",
+      "01_ddl/03_tables/V014__create_stock_alert.sql": "237bae7891e5e71aafd0ae94cacebdc3bc216194",
+      "01_ddl/04_alter/V006__add_foreign_keys.sql": "18af8afc6515924dc8c25e3e807d00a88ff749a9",
+      "01_ddl/04_alter/V012__add_foreign_keys.sql": "6483be6d6b1c4bbfdc97f799c55bed038dd81813",
+      "01_ddl/04_alter/V015__add_foreign_keys.sql": "244a44124d63a51f1fa39d28007a53d6dda9addc",
+      "01_ddl/04_alter/V017__add_stock_after_to_stock_adjustment.sql": "f53993e6e7dcd880ca423e06468f629689acab9f",
+      "01_ddl/04_alter/V018__unique_reservation_product.sql": "c81e10e9e990bdb3a8b2cbcfc6763925e2fc05dd",
+      "01_ddl/04_alter/V018__unique_reservation_product.sql.conf": "73bd53a14630790bc837261bac497d731c86deb2",
+      "01_ddl/05_views/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/06_materialized_views/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/07_functions/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/08_procedures/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/09_triggers/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/10_indexes/V007__create_indexes.sql": "21ac34387453c248c798b315dfb49c5358467777",
+      "01_ddl/10_indexes/V013__create_indexes.sql": "787659826f898a56400099357e972fb1c8ee3081",
+      "01_ddl/10_indexes/V016__create_indexes.sql": "34b21a07f3a5846f7716f03243c34da177b25d77",
+      "02_dml/00_inserts/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "02_dml/01_updates/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "02_dml/02_deletes/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "02_dml/03_upserts/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "02_dml/04_patches/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "03_dcl/00_roles/V002__create_roles.sql": "d3ad46450f99d0901cd8bc66ae36b12c7aabab89",
+      "03_dcl/00_roles/V019__products_reader.sql": "bbd1da3ae810bb611a2e03d96cfa2ec4a0e844c6",
+      "03_dcl/01_grants/V003__grants.sql": "0c154b929339df6811946ab9d608d8f008b4e6ad",
+      "03_dcl/01_grants/V020__products_reader_grants.sql": "3507e3e6d958803b12ede302371bb6239ad028b7",
+      "03_dcl/02_policies/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "04_tcl/00_transaction_blocks/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "04_tcl/01_manual_recoveries/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "04_tcl/02_release_tags/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "flyway.toml": "3afcbc70ec203431cf6a8e71b639668d91f7c2c9"
+    },
+    "matches_release_db_candidate": true
+  }
+}

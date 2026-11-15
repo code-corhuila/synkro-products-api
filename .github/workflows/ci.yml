@@ -83,7 +83,7 @@ jobs:
           # so success alone proves nothing: count them.
           expected=$(find test/products-db -name 'V*.sql' | wc -l)
           applied=$(psql -h localhost -U postgres -d postgres -tAc \
-            "SELECT count(*) FROM flyway_schema_history WHERE success AND version IS NOT NULL;")
+            "SELECT count(*) FROM products_schema.flyway_schema_history WHERE success AND version IS NOT NULL;")
           echo "V migrations vendored: $expected, applied: $applied"
           if [ "$expected" -eq 0 ] || [ "$applied" != "$expected" ]; then
             echo "Applied migrations do not match test/products-db"
@@ -95,4 +95,8 @@ jobs:
         # needs nothing beyond V003's grants.
         env:
           TEST_DATABASE_URL: postgres://products_app:ci_app_pw@localhost:5432/postgres?sslmode=disable
-        run: go test -count=1 -v ./internal/adapter/out/persistence/
+          TEST_ADMIN_DATABASE_URL: postgres://postgres:ci_admin_pw@localhost:5432/postgres?sslmode=disable
+        run: go test -tags=integration -count=1 -v -coverpkg=./... -coverprofile=coverage.out ./...
+
+      - name: Coverage gates — statement weighted, including HTTP calls across packages
+        run: python3 scripts/check-coverage.py coverage.out

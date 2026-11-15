@@ -9,15 +9,16 @@ import (
 )
 
 type healthResponse struct {
-	Status    string    `json:"status"`
-	Service   string    `json:"service"`
-	Timestamp time.Time `json:"timestamp"`
+	Status       string            `json:"status"`
+	Service      string            `json:"service"`
+	Timestamp    time.Time         `json:"timestamp"`
+	Dependencies map[string]string `json:"dependencies"`
 }
 
 // NewRouter wires every route of this service. /health is public
 // (cross-cutting.md §4); every other route is wrapped by the
 // default-deny middleware.
-func NewRouter(verifier TokenVerifier, products in.ProductUseCases, categories in.CategoryUseCases, stock in.StockUseCases, alerts in.StockAlertUseCases) http.Handler {
+func NewRouter(verifier TokenVerifier, products in.ProductUseCases, categories in.CategoryUseCases, stock in.StockUseCases, alerts in.StockAlertUseCases, health in.HealthUseCases) http.Handler {
 	p := productHandlers{products}
 	c := categoryHandlers{categories}
 	s := stockHandlers{stock}
@@ -55,18 +56,25 @@ func NewRouter(verifier TokenVerifier, products in.ProductUseCases, categories i
 	protected.HandleFunc("/", writeNotFound)
 
 	root := http.NewServeMux()
-	root.HandleFunc("GET /health", handleHealth)
+	root.HandleFunc("GET /health", handleHealth(health))
 	root.Handle("/api/v1/", requireAuth(verifier, protected))
 	root.HandleFunc("/", writeNotFound)
 	return withCorrelation(root)
 }
 
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(healthResponse{
-		Status:    "ok",
-		Service:   "synkro-products-api",
-		Timestamp: time.Now().UTC(),
-	})
+func handleHealth(health in.HealthUseCases) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		code, status, database := http.StatusServiceUnavailable, "degraded", "down"
+		if health != nil && health.Healthy(r.Context()) {
+			code, status, database = http.StatusOK, "ok", "ok"
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(code)
+		json.NewEncoder(w).Encode(healthResponse{
+			Status:       status,
+			Service:      "synkro-products-api",
+			Timestamp:    time.Now().UTC(),
+			Dependencies: map[string]string{"database": database},
+		})
+	}
 }
