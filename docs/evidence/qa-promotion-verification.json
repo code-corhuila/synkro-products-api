@@ -1,0 +1,164 @@
+{
+  "story": "HU-PRO-15 / synkro-docs#317",
+  "scope": "Fresh local verification of the QA proposal; not a persistent QA deployment or an executed main promotion. Historical develop evidence stays separate.",
+  "protected_codeowners_unchanged": true,
+  "billing_disposition": "Owner instructed on 2026-11-14 America/Bogota to ignore the account billing impediment for this delivery. Unstarted Actions jobs are not successful tests; review/integrity/tests/branch policy remain.",
+  "exclusions": "HU-DOCS-98 untouched. TD-012 remains open/excluded. TD-018 retains five open excluded items, coordinated by SergioAndres17 without a review date.",
+  "promotion": {
+    "baseline": "22245634d2f10a5667899a24d5c1511d4f3a0891",
+    "source": "ee50bb7c6c1d2b88ce9e83eec17751961f4883cf",
+    "branch": "qa-products-store-health",
+    "picks": [
+      "7a516aeb7b247c930a9270da9bac46d41ab9fa6b",
+      "c453a8e36a717b6635c4942ab0d4a8b93d363731",
+      "55d26f8ac65d21137f2e170fa3655f33a06185bd",
+      "3e33d457a1c666608415f006f309b428e2b4bf3a"
+    ],
+    "trail": [
+      {
+        "source": "7a516aeb7b247c930a9270da9bac46d41ab9fa6b",
+        "target": "17e271c8f5b20596d83ccafb2adb879e69da009f",
+        "subject": "test(health): specify bounded store probe before implementation"
+      },
+      {
+        "source": "c453a8e36a717b6635c4942ab0d4a8b93d363731",
+        "target": "aceb430c47a70a647f93efe7ae5664b56a42455f",
+        "subject": "feat(health): report bounded Products store availability"
+      },
+      {
+        "source": "55d26f8ac65d21137f2e170fa3655f33a06185bd",
+        "target": "936ed4480694dc37aaacef7820bedeebfdd6e043",
+        "subject": "docs(health): record complete Linux validation and delivery gates"
+      },
+      {
+        "source": "3e33d457a1c666608415f006f309b428e2b4bf3a",
+        "target": "e46ac534638e34ec56be55ab14107ce93f2599ac",
+        "subject": "chore(test): pin merged Products DB revision"
+      }
+    ],
+    "candidate": "e46ac534638e34ec56be55ab14107ce93f2599ac",
+    "tree_identical_to_develop": true,
+    "initial_branch_when_tested": "qa/products-store-health"
+  },
+  "source_comparison": {
+    "source": "ee50bb7c6c1d2b88ce9e83eec17751961f4883cf",
+    "candidate": "e46ac534638e34ec56be55ab14107ce93f2599ac",
+    "tree_identical_to_source": true,
+    "protected_codeowners_unchanged": true,
+    "historical_sql_unchanged": []
+  },
+  "linux_ci": {
+    "started_utc": "2026-11-15T02:05:59.265390+00:00",
+    "go_image": "golang:1.26.9-alpine3.23",
+    "db_source_commit": "0867b1e98e65ed3c24a170248961ef04d1a44a89",
+    "api_commit": "e46ac534638e34ec56be55ab14107ce93f2599ac",
+    "passed": true,
+    "applied_versions": 20,
+    "coverage": {
+      "domain": {
+        "covered": 46,
+        "statements": 46,
+        "percentage": 100.0,
+        "minimum": 90,
+        "passed": true
+      },
+      "application": {
+        "covered": 160,
+        "statements": 177,
+        "percentage": 90.4,
+        "minimum": 80,
+        "passed": true
+      },
+      "infrastructure": {
+        "covered": 991,
+        "statements": 1084,
+        "percentage": 91.42,
+        "minimum": 60,
+        "passed": true
+      },
+      "global": {
+        "covered": 1219,
+        "statements": 1356,
+        "percentage": 89.9,
+        "minimum": 80,
+        "passed": true
+      }
+    },
+    "source_fixture_matches_verified_db": true,
+    "finished_utc": "2026-11-15T02:06:32.963423+00:00",
+    "remaining_containers": [],
+    "remaining_networks": [],
+    "evidence_hashes": {
+      "coverage.out": "fd331dc3b542695d5f10ff265bb848165bb2304e711c6a9c7bf532f5fd794b14",
+      "domain-imports.txt": "6389e4f999dfa127f6314b1e31ecbc0224b0863ba71ce941ac3a4b15ebc86230",
+      "integration.jsonl": "9ad820a68ae66ba794ee0e9d69b9e747b2fd34095ee1670a325e3ddef1de73b4",
+      "migrations.log": "acd2507fc028e7e463c4a19c691e68a1626f7feb30b9c8f417d5849142f7fad9",
+      "runner.log": "4b3c262e25fd5a9a898054eb6286a20297bbaa4a2baad6e6336923bdd53956d8",
+      "unit.jsonl": "1f711ea2f77b01cfe50cf70a34bcfd2a1bae48945b225b8560bd98bda056c620"
+    },
+    "stages": {
+      "unit": {
+        "top_level_tests": 219,
+        "passing_test_and_subtest_events": 350,
+        "failed": [],
+        "skipped_events": 56
+      },
+      "integration": {
+        "top_level_tests": 282,
+        "passing_test_and_subtest_events": 421,
+        "failed": [],
+        "skipped_events": 0
+      }
+    }
+  },
+  "format": {
+    "scope": "All committed Go blobs, LF as checked out on Linux; no working-copy CRLF noise",
+    "files_checked": 70,
+    "unformatted": []
+  },
+  "fixture": {
+    "source_commit": "0867b1e98e65ed3c24a170248961ef04d1a44a89",
+    "matches_qa_db_candidate": true,
+    "blobs": {
+      "01_ddl/00_extensions/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/01_schemas/V001__create_schema_products.sql": "f87fefac50463a513f851cd5c19e83e2cc5aa8f3",
+      "01_ddl/02_types/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/03_tables/V004__create_category.sql": "7366e09472a1f380a193cd77a7b87fe6b6c440db",
+      "01_ddl/03_tables/V005__create_product.sql": "53ec775ad6f74c64cf4f5968a9b646a4065006d4",
+      "01_ddl/03_tables/V008__create_idempotency_key.sql": "1c0461b4b3ed1491fdb19269d448c935bb552a2b",
+      "01_ddl/03_tables/V009__create_stock_adjustment.sql": "847764c1e9fc81acd61ce9bee268649f07d56f64",
+      "01_ddl/03_tables/V010__create_stock_reservation.sql": "c0b76b5049add1a15e9c3a9be536b082f31ddefb",
+      "01_ddl/03_tables/V011__create_stock_reservation_line.sql": "28414c529053c854ca90f93a94b53d4d3ab64be4",
+      "01_ddl/03_tables/V014__create_stock_alert.sql": "237bae7891e5e71aafd0ae94cacebdc3bc216194",
+      "01_ddl/04_alter/V006__add_foreign_keys.sql": "18af8afc6515924dc8c25e3e807d00a88ff749a9",
+      "01_ddl/04_alter/V012__add_foreign_keys.sql": "6483be6d6b1c4bbfdc97f799c55bed038dd81813",
+      "01_ddl/04_alter/V015__add_foreign_keys.sql": "244a44124d63a51f1fa39d28007a53d6dda9addc",
+      "01_ddl/04_alter/V017__add_stock_after_to_stock_adjustment.sql": "f53993e6e7dcd880ca423e06468f629689acab9f",
+      "01_ddl/04_alter/V018__unique_reservation_product.sql": "c81e10e9e990bdb3a8b2cbcfc6763925e2fc05dd",
+      "01_ddl/04_alter/V018__unique_reservation_product.sql.conf": "73bd53a14630790bc837261bac497d731c86deb2",
+      "01_ddl/05_views/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/06_materialized_views/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/07_functions/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/08_procedures/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/09_triggers/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "01_ddl/10_indexes/V007__create_indexes.sql": "21ac34387453c248c798b315dfb49c5358467777",
+      "01_ddl/10_indexes/V013__create_indexes.sql": "787659826f898a56400099357e972fb1c8ee3081",
+      "01_ddl/10_indexes/V016__create_indexes.sql": "34b21a07f3a5846f7716f03243c34da177b25d77",
+      "02_dml/00_inserts/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "02_dml/01_updates/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "02_dml/02_deletes/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "02_dml/03_upserts/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "02_dml/04_patches/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "03_dcl/00_roles/V002__create_roles.sql": "d3ad46450f99d0901cd8bc66ae36b12c7aabab89",
+      "03_dcl/00_roles/V019__products_reader.sql": "bbd1da3ae810bb611a2e03d96cfa2ec4a0e844c6",
+      "03_dcl/01_grants/V003__grants.sql": "0c154b929339df6811946ab9d608d8f008b4e6ad",
+      "03_dcl/01_grants/V020__products_reader_grants.sql": "3507e3e6d958803b12ede302371bb6239ad028b7",
+      "03_dcl/02_policies/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "04_tcl/00_transaction_blocks/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "04_tcl/01_manual_recoveries/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "04_tcl/02_release_tags/.gitkeep": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "flyway.toml": "3afcbc70ec203431cf6a8e71b639668d91f7c2c9"
+    }
+  },
+  "branch_name_disposition": "GitHub rejected qa/... because permanent ref qa already exists; qa-... follows existing child naming. Branch rename and documentation only, tested commit contents unchanged."
+}
