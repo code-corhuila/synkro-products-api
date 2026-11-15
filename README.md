@@ -186,6 +186,7 @@ approval from `ariel5253`. Use English Conventional Commits. See the
 - [Product price history](docs/price-history-design.md) and
   [OpenAPI extension](docs/price-history.openapi.yaml).
 - [Store health design and evidence](docs/store-health-design.md).
+- [QA promotion record (HU-PRO-15)](docs/qa-promotion.md).
 - [Domain rules](https://github.com/code-corhuila/synkro-docs/blob/main/02-domain/entities-and-rules.md),
   [data models](https://github.com/code-corhuila/synkro-docs/blob/main/06-data/models.md)
   and [testing strategy](https://github.com/code-corhuila/synkro-docs/blob/main/11-quality/testing-strategy.md).
