@@ -17,7 +17,7 @@ type healthResponse struct {
 // NewRouter wires every route of this service. /health is public
 // (cross-cutting.md §4); every other route is wrapped by the
 // default-deny middleware.
-func NewRouter(verifier TokenVerifier, products in.ProductUseCases, categories in.CategoryUseCases, stock in.StockUseCases, alerts in.StockAlertUseCases) http.Handler {
+func NewRouter(verifier TokenVerifier, products in.ProductUseCases, categories in.CategoryUseCases, stock in.StockUseCases, alerts in.StockAlertUseCases, health in.HealthUseCases) http.Handler {
 	p := productHandlers{products}
 	c := categoryHandlers{categories}
 	s := stockHandlers{stock}
