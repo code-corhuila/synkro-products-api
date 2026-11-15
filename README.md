@@ -175,6 +175,7 @@ approval from `ariel5253`. Use English Conventional Commits. See the
 - [Authentication](docs/authentication.md): preserved JWT verification details.
 - [Testing](docs/testing.md): preserved database setup and fixture maintenance.
 - [Store health design and evidence](docs/store-health-design.md).
+- [QA promotion record (HU-PRO-15)](docs/qa-promotion.md).
 - [Domain rules](https://github.com/code-corhuila/synkro-docs/blob/main/02-domain/entities-and-rules.md),
   [data models](https://github.com/code-corhuila/synkro-docs/blob/main/06-data/models.md)
   and [testing strategy](https://github.com/code-corhuila/synkro-docs/blob/main/11-quality/testing-strategy.md).
