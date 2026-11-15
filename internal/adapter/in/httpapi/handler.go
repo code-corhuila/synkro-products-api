@@ -28,6 +28,7 @@ func NewRouter(verifier TokenVerifier, products in.ProductUseCases, categories i
 	protected.HandleFunc("GET /api/v1/products", guard(canReadCatalog, p.list))
 	protected.HandleFunc("POST /api/v1/products", guard(canWriteCatalog, p.create))
 	protected.HandleFunc("GET /api/v1/products/{id}", guard(canReadCatalog, p.get))
+	protected.HandleFunc("GET /api/v1/products/{id}/price-history", guard(canReadPriceHistory, p.history))
 	protected.HandleFunc("PUT /api/v1/products/{id}", guard(canWriteCatalog, p.update))
 	protected.HandleFunc("DELETE /api/v1/products/{id}", guard(canWriteCatalog, p.deactivate))
 
