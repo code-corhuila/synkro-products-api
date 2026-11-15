@@ -21,6 +21,36 @@ jobs:
           test -f .env.example
           echo "Common files present."
 
+  # Dedicated, stable check name for the negative authentication tests. It
+  # runs on every pull request to develop, qa and main (no path filters), so
+  # a change that weakens token verification or authorization cannot skip it.
+  # It needs nothing but Go: the tests use the in-memory store.
+  security-negative-auth:
+    name: security-negative-auth
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.9"
+      - name: Negative authentication tests must exist
+        # `go test -run` succeeds with "no tests to run" when the pattern
+        # matches nothing, so renaming the tests would silently turn this job
+        # into a no-op. Count them first.
+        run: |
+          set -e
+          found=$(go test -list '^TestSecurityNegativeAuth_' ./internal/adapter/in/httpapi/ | grep -c '^TestSecurityNegativeAuth_' || true)
+          echo "TestSecurityNegativeAuth_ tests found: $found"
+          if [ "$found" -lt 4 ]; then
+            echo "Expected at least 4 TestSecurityNegativeAuth_ tests"
+            exit 1
+          fi
+      - name: Run negative authentication tests
+        run: go test -count=1 -v -run '^TestSecurityNegativeAuth_|^TestAuth_' ./internal/adapter/in/httpapi/
+
   build-test-and-architecture-check:
     runs-on: ubuntu-latest
     services:
