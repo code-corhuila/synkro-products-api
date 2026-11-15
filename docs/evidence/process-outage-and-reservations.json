@@ -1,0 +1,248 @@
+{
+  "started_utc": "2026-11-15T01:13:46.655517+00:00",
+  "checks": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "status": 200,
+      "elapsed_ms": 2.27,
+      "response": {
+        "status": "ok",
+        "service": "synkro-products-api",
+        "timestamp": "2026-11-15T01:13:49.6895764Z",
+        "dependencies": {
+          "database": "ok"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products/categories",
+      "status": 201,
+      "elapsed_ms": 7.49,
+      "response": {
+        "categoryId": "01a1dcc4-877a-7a0e-9fbf-d5f2c3fbaaaf",
+        "name": "Probe e63cefb0a42840959134ab033ef58ff9",
+        "active": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products",
+      "status": 201,
+      "elapsed_ms": 29.05,
+      "response": {
+        "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+        "name": "Probe e63cefb0a42840959134ab033ef58ff9",
+        "priceCents": 4999,
+        "stock": 0,
+        "categoryId": "01a1dcc4-877a-7a0e-9fbf-d5f2c3fbaaaf",
+        "active": true
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/products/01a1dcc4-8792-7f28-a983-966673c7d4bc/stock-adjustments",
+      "status": 201,
+      "elapsed_ms": 13.49,
+      "response": {
+        "adjustmentId": "01a1dcc4-879f-762b-9c4e-7fb6a7d3dc2f",
+        "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+        "delta": 10,
+        "reason": "Disposable probe",
+        "adjustedBy": "77777777-7777-7777-7777-777777777777",
+        "adjustedAt": "2026-11-14T20:13:49.728826-05:00",
+        "currentStock": 10
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/stock-reservations",
+      "status": 201,
+      "elapsed_ms": 14.87,
+      "response": {
+        "reservationId": "01a1dcc4-87ad-7669-ba54-97cb20f6836d",
+        "status": "RESERVED",
+        "createdAt": "2026-11-14T20:13:49.742328-05:00",
+        "lines": [
+          {
+            "lineId": "01a1dcc4-87ad-7668-870b-bb0818d6882a",
+            "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+            "quantity": 2,
+            "unitPriceCents": 4999
+          }
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/stock-reservations",
+      "status": 200,
+      "elapsed_ms": 9.41,
+      "response": {
+        "reservationId": "01a1dcc4-87ad-7669-ba54-97cb20f6836d",
+        "status": "RESERVED",
+        "createdAt": "2026-11-14T20:13:49.742328-05:00",
+        "lines": [
+          {
+            "lineId": "01a1dcc4-87ad-7668-870b-bb0818d6882a",
+            "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+            "quantity": 2,
+            "unitPriceCents": 4999
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/01a1dcc4-8792-7f28-a983-966673c7d4bc",
+      "status": 200,
+      "elapsed_ms": 3.43,
+      "response": {
+        "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+        "name": "Probe e63cefb0a42840959134ab033ef58ff9",
+        "priceCents": 4999,
+        "stock": 8,
+        "categoryId": "01a1dcc4-877a-7a0e-9fbf-d5f2c3fbaaaf",
+        "active": true
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/products/01a1dcc4-8792-7f28-a983-966673c7d4bc",
+      "status": 200,
+      "elapsed_ms": 29.05,
+      "response": {
+        "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+        "name": "Probe e63cefb0a42840959134ab033ef58ff9",
+        "priceCents": 8999,
+        "stock": 8,
+        "categoryId": "01a1dcc4-877a-7a0e-9fbf-d5f2c3fbaaaf",
+        "active": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/stock-reservations/01a1dcc4-87ad-7669-ba54-97cb20f6836d",
+      "status": 200,
+      "elapsed_ms": 2.8,
+      "response": {
+        "reservationId": "01a1dcc4-87ad-7669-ba54-97cb20f6836d",
+        "status": "RESERVED",
+        "createdAt": "2026-11-14T20:13:49.742328-05:00",
+        "lines": [
+          {
+            "lineId": "01a1dcc4-87ad-7668-870b-bb0818d6882a",
+            "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+            "quantity": 2,
+            "unitPriceCents": 4999
+          }
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/stock-reservations",
+      "status": 400,
+      "elapsed_ms": 1.12,
+      "response": {
+        "error": "VALIDATION_ERROR",
+        "message": "The request has invalid fields",
+        "details": [
+          {
+            "field": "lines[1].productId",
+            "message": "a product may appear at most once"
+          }
+        ],
+        "traceId": "97db2af8-3bd4-46bc-8924-697fd0cb91b1"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/stock-reservations/01a1dcc4-87ad-7669-ba54-97cb20f6836d/release",
+      "status": 200,
+      "elapsed_ms": 13.08,
+      "response": {
+        "reservationId": "01a1dcc4-87ad-7669-ba54-97cb20f6836d",
+        "status": "RELEASED",
+        "createdAt": "2026-11-14T20:13:49.742328-05:00",
+        "releasedAt": "2026-11-14T20:13:49.803007-05:00",
+        "lines": [
+          {
+            "lineId": "01a1dcc4-87ad-7668-870b-bb0818d6882a",
+            "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+            "quantity": 2,
+            "unitPriceCents": 4999
+          }
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/stock-reservations/01a1dcc4-87ad-7669-ba54-97cb20f6836d/release",
+      "status": 200,
+      "elapsed_ms": 22.82,
+      "response": {
+        "reservationId": "01a1dcc4-87ad-7669-ba54-97cb20f6836d",
+        "status": "RELEASED",
+        "createdAt": "2026-11-14T20:13:49.742328-05:00",
+        "releasedAt": "2026-11-14T20:13:49.803007-05:00",
+        "lines": [
+          {
+            "lineId": "01a1dcc4-87ad-7668-870b-bb0818d6882a",
+            "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+            "quantity": 2,
+            "unitPriceCents": 4999
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/products/01a1dcc4-8792-7f28-a983-966673c7d4bc",
+      "status": 200,
+      "elapsed_ms": 2.09,
+      "response": {
+        "productId": "01a1dcc4-8792-7f28-a983-966673c7d4bc",
+        "name": "Probe e63cefb0a42840959134ab033ef58ff9",
+        "priceCents": 8999,
+        "stock": 10,
+        "categoryId": "01a1dcc4-877a-7a0e-9fbf-d5f2c3fbaaaf",
+        "active": true
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "status": 503,
+      "elapsed_ms": 1.41,
+      "response": {
+        "status": "degraded",
+        "service": "synkro-products-api",
+        "timestamp": "2026-11-15T01:13:50.4506893Z",
+        "dependencies": {
+          "database": "down"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "status": 200,
+      "elapsed_ms": 2.32,
+      "response": {
+        "status": "ok",
+        "service": "synkro-products-api",
+        "timestamp": "2026-11-15T01:13:51.0171157Z",
+        "dependencies": {
+          "database": "ok"
+        }
+      }
+    }
+  ],
+  "same_api_process_across_outage": true,
+  "passed": true,
+  "finished_utc": "2026-11-15T01:13:51.021934+00:00",
+  "api_binary_sha256": "adcd5276c2cc62cc66816f760fadae63793f0f74ebb00c9e95bf154b2f0994d1",
+  "log_sha256": "dbdc58399b83dc4b43421917a30620359dce00b1ac622f6f11b4aa03f6d755ba"
+}

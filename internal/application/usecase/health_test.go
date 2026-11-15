@@ -30,6 +30,7 @@ const (
 type fakeStoreHealth struct {
 	mu          sync.Mutex
 	calls       int
+	contexts    []context.Context
 	hasDeadline bool
 	deadline    time.Time
 	ctxErr      error
@@ -41,6 +42,7 @@ type fakeStoreHealth struct {
 func (f *fakeStoreHealth) Check(ctx context.Context) error {
 	f.mu.Lock()
 	f.calls++
+	f.contexts = append(f.contexts, ctx)
 	f.deadline, f.hasDeadline = ctx.Deadline()
 	f.mu.Unlock()
 	if f.started != nil {
@@ -140,8 +142,19 @@ func TestHealthService_EachCheckGetsItsOwnBoundedDeadline(t *testing.T) {
 	if calls != 2 {
 		t.Fatalf("expected one store check per call, got %d", calls)
 	}
-	if !second.After(first) {
-		t.Fatalf("second check reused the first deadline: %v then %v", first, second)
+	if second.Before(first) {
+		t.Fatalf("second deadline moved backwards: %v then %v", first, second)
+	}
+	// Windows may give consecutive time.Now calls the same clock tick.
+	// Distinct derived contexts prove no cancelled probe context was reused.
+	store.mu.Lock()
+	firstContext, secondContext := store.contexts[0], store.contexts[1]
+	store.mu.Unlock()
+	if firstContext == secondContext {
+		t.Fatal("two probes reused the same context")
+	}
+	if firstContext.Err() != context.Canceled || secondContext.Err() != context.Canceled {
+		t.Fatal("each probe must release its derived context after returning")
 	}
 }
 
