@@ -1,0 +1,54 @@
+{
+  "label": "api-full-shared-coverage-restored",
+  "started_utc": "2026-11-15T01:11:21.204767+00:00",
+  "finished_utc": "2026-11-15T01:11:28.298623+00:00",
+  "command": [
+    "C:\\Program Files\\Go\\bin\\go.exe",
+    "test",
+    "-json",
+    "-count=1",
+    "-tags=integration",
+    "-coverpkg=./...",
+    "-coverprofile=C:\\Users\\ASUS\\.codex\\.chatgpt-projects\\g-p-6aba90944db48191bf804d7733b52f76\\deliverables\\products-pro15\\api-full-shared-coverage-restored.cover",
+    "./..."
+  ],
+  "exit_code": 0,
+  "source_unchanged": true,
+  "compiler_or_setup_failure": false,
+  "log_sha256": "6bdfa6da0952f433337e48a5d83b8cfd02b80b5a364c42e387bed93ddf65a85c",
+  "top_level_tests": 282,
+  "passing_test_and_subtest_events": 421,
+  "failed": [],
+  "skipped": [],
+  "coverage": {
+    "domain": {
+      "covered": 46,
+      "statements": 46,
+      "percentage": 100.0,
+      "minimum": 90,
+      "passed": true
+    },
+    "application": {
+      "covered": 160,
+      "statements": 177,
+      "percentage": 90.4,
+      "minimum": 80,
+      "passed": true
+    },
+    "infrastructure": {
+      "covered": 991,
+      "statements": 1084,
+      "percentage": 91.42,
+      "minimum": 60,
+      "passed": true
+    },
+    "global": {
+      "covered": 1219,
+      "statements": 1356,
+      "percentage": 89.9,
+      "minimum": 80,
+      "passed": true
+    }
+  },
+  "coverage_profile_sha256": "13cecad2819d825309e16a3035d2bf404984cee5d5df544d760cef89dd5de267"
+}

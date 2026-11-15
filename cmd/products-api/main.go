@@ -55,7 +55,7 @@ func main() {
 		usecase.NewCategoryService(db.Categories(), newID),
 		usecase.NewStockService(db.StockAdjustments(), db.StockReservations(), newID),
 		usecase.NewStockAlertService(db.StockAlerts(), newID, time.Now),
-        nil, // Compile-only wiring before functional RED.
+		usecase.NewHealthService(db, time.Second),
 	)
 
 	srv := &http.Server{
