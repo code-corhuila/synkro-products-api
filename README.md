@@ -1,108 +1,181 @@
 # synkro-products-api
 
-> products bounded context: service API
+> Products API for the catalog, categories, stock adjustments, reservations and low-stock alerts.
 
-Part of the **SynkroTech SAS Sales Management System** — organization `code-corhuila`.
-Governance and documentation live in [`synkro-docs`](https://github.com/code-corhuila/synkro-docs).
+Part of the **SynkroTech SAS Sales Management System**. Architecture, decisions and
+contracts live in [synkro-docs](https://github.com/code-corhuila/synkro-docs).
 
-## Running locally
+**Quick start:** from this repository's root, use Go 1.26.9 and run
+`go run ./cmd/products-api` with a migrated PostgreSQL database, the restricted
+`products_app` credentials and Auth's public key configured. See
+[Getting started](#getting-started). For the complete Docker platform, start in
+[synkro-infra-postgres](https://github.com/code-corhuila/synkro-infra-postgres).
 
-The service needs a PostgreSQL instance with `products_schema` created by
-[`synkro-products-db`](https://github.com/code-corhuila/synkro-products-db)'s
-migrations, reached as the `products_app` role:
+## What it does
 
-```bash
-DATABASE_URL="postgres://products_app:<password>@localhost:5432/postgres?sslmode=disable" \
-JWT_PUBLIC_KEY_FILE=./synkro-auth-public.pem \
+- Creates, reads, updates and logically deactivates products and categories.
+- Records inventory adjustments and manages reservations used by the sale saga.
+- Owns low-stock alerts opened and resolved by synkro-worker.
+- Verifies RS256 tokens locally and checks roles or operation-specific permissions.
+- Exposes a public database-aware health check with a one-second bound.
+
+Schema changes belong to synkro-products-db. The PostgreSQL instance and application
+login belong to synkro-infra-postgres.
+
+## Where it fits
+
+```mermaid
+flowchart LR
+  Portal["synkro-products-portal"] -->|"shared client"| Host["synkro-front"]
+  Host --> Gateway["synkro-api-gateway"]
+  Gateway -->|"catalog and alerts"| API["synkro-products-api"]
+  Workflow["synkro-workflow"] -->|"reservations"| API
+  Worker["synkro-worker"] -->|"products and alerts"| API
+  API -->|"products_app"| DB[("PostgreSQL: products_schema")]
+```
+
+Workflow and Worker call the API on the internal `platform` network. Reservations
+are internal; the gateway publishes catalog and alert routes. The API exposes
+8080 inside Docker and publishes no host port in its Compose definition.
+
+## Tech stack
+
+| Component | Choice |
+|---|---|
+| Language and routing | Go 1.26.9; standard-library `net/http` |
+| Persistence | PostgreSQL; `pgx/v5` |
+| Authentication | RS256; `golang-jwt/jwt/v5` |
+| Build and test | Go tools; Python coverage gate; Docker/Flyway integration fixture |
+| Runtime | `alpine:3.23` container; listener on 8080 |
+
+## Dependencies
+
+| Depends on | Why | Configuration |
+|---|---|---|
+| Migrated PostgreSQL | Catalog, stock, reservations and alerts | `DATABASE_URL`, using `products_app` |
+| synkro-products-db | Schema, migrations and grants | Apply owning migrations first |
+| Auth public key | Local JWT verification | Exactly one public-key variable |
+| synkro-api-gateway | Public entry point | Internal Docker DNS |
+| Docker network `platform` | Container connectivity | External network in `deploy/compose.yml` |
+
+## Getting started
+
+<a id="running-locally"></a>
+
+Run commands from this repository's root. Install Go 1.26.9 and obtain a database
+migrated by synkro-products-db, its restricted credentials and Auth's public PEM.
+The [configuration example](.env.example) lists inputs; `go run` does not
+automatically load a `.env` file.
+
+In **PowerShell**, after supplying those environment variables:
+
+```powershell
 go run ./cmd/products-api
 ```
 
-The service listens on `:8080` (override with `HTTP_PORT`). It refuses to
-start without `DATABASE_URL` or without a valid JWT public key (see
-[Authentication](#authentication)). Verify it:
+In a second PowerShell window:
 
-```bash
-curl http://localhost:8080/health
+```powershell
+Invoke-RestMethod http://localhost:8080/health
 ```
 
-`/health` checks access to `products_schema.product` through an application
-port with a one-second timeout. It returns 200 (`ok`, database `ok`) or 503
-(`degraded`, database `down`), with UTC timestamp and no connection/error
-details. It stays public when the store is unavailable and calls no other
-service. See [design and evidence](docs/store-health-design.md).
+In **Bash**, the equivalent configuration uses placeholders, never real credentials
+in committed files or recordings:
 
+```bash
+DATABASE_URL='postgres://products_app:<url-encoded-password>@localhost:5432/synkro?search_path=products_schema&sslmode=disable' \
+JWT_PUBLIC_KEY_FILE=/absolute/path/to/auth-public.pem \
+go run ./cmd/products-api
+```
+
+The database address must be reachable from the Go process. A database available
+only on Docker's internal network is not reachable as `localhost:5432` on the host.
+For container execution, use `deploy/compose.yml` through synkro-infra-postgres,
+which supplies the internal address, public key and network.
+
+## Configuration
+
+| Variable | Purpose | Required/default |
+|---|---|---|
+| `HTTP_PORT` | HTTP listener | `8080` |
+| `DATABASE_URL` | PostgreSQL URI for `products_app` and its schema | Required |
+| `JWT_PUBLIC_KEY` | Public PEM; literal `\n` separators accepted | Exactly one key source |
+| `JWT_PUBLIC_KEY_FILE` | Path to the public PEM | Exactly one key source |
+
+The private signing key belongs only to Auth. Missing or invalid public keys
+prevent startup. A valid key does not prove database availability.
+
+## Interface
+
+| Method and route | Authorization | Result |
+|---|---|---|
+| `GET /api/v1/products` and `/{id}` | ADMIN, SALESPERSON, INVENTORY or `products:read` | Catalog or product |
+| `POST /api/v1/products`; `PUT` / `DELETE /{id}` | ADMIN, INVENTORY or `products:write` | Create, update or deactivate |
+| `GET /api/v1/products/categories` | Catalog read access | Categories |
+| `POST /api/v1/products/categories`; `PUT` / `DELETE /{id}` | Catalog write access | Create, rename or deactivate |
+| `POST /api/v1/products/{id}/stock-adjustments` | Catalog write access | Adjustment and resulting stock |
+| `POST /api/v1/stock-reservations`; `GET /{id}` | `stock:reserve` | Reservation |
+| `POST /api/v1/stock-reservations/{id}/release` | `stock:release` | Released reservation |
+| `GET /api/v1/stock-alerts` | ADMIN, INVENTORY or `stock-alerts:read` | Alerts |
+| `POST /api/v1/stock-alerts`; `POST /{id}/resolve` | `stock-alerts:write` | Open or resolve alert |
+| `GET /health` | Public | 200 healthy; 503 when the store is unavailable |
+
+The [Products OpenAPI contract](https://github.com/code-corhuila/synkro-docs/blob/main/07-api/contracts/openapi/synkro-products-api.yaml)
+defines exact payloads and response codes. Health probes `products_schema.product`
+through an application port; it includes UTC time and no connection diagnostics.
 
 ## Authentication
 
-Every route except `GET /health` requires `Authorization: Bearer <JWT>`, and
-this service verifies the token itself (ADR-006): the gateway only checks
-that a credential is present, so it does not replace this validation.
+Every API route requires a locally verified token; `/health` remains public.
+Invalid authentication returns a generic 401; insufficient access returns 403.
+The [authentication guide](docs/authentication.md) preserves key, algorithm,
+claims, clock-skew and trusted-identity details.
 
-- **Algorithm:** only `RS256`. `none`, `HS256` and any other algorithm are
-  rejected whatever the token header says.
-- **Key:** the public key of `synkro-auth-api`, as PEM in `JWT_PUBLIC_KEY`
-  (newlines may be written as `\n`) or as a file path in
-  `JWT_PUBLIC_KEY_FILE` - exactly one of them. RSA, at least 2048 bits. A
-  private key is refused. The service does not start without a valid key.
-- **Claims:** `exp` is required and `sub`, `iat`, `jti`, `roles` and
-  `permissions` must be present. Clock skew of 30 s is tolerated on `exp`,
-  `nbf` and `iat`. A person's `sub` is a UUID; a `SERVICE` token's `sub` is the
-  service name.
-- **Failures:** a missing, malformed, expired, wrongly signed or non-RS256
-  token is `401 UNAUTHORIZED` with one generic message, so the response does
-  not say which check failed. A valid token without the role or permission is
-  `403 FORBIDDEN`.
-- Identity, roles and permissions come only from the verified claims; any
-  `X-User-*` header is ignored.
+## Project structure
+
+```text
+cmd/products-api/       process entry point and dependency wiring
+internal/
+  domain/              business models and rules; no external dependencies
+  application/         use cases and inbound/outbound ports
+  adapter/             HTTP/security and PostgreSQL adapters
+deploy/                Dockerfile and internal Compose service
+scripts/               migration fixture, coverage and synchronization tools
+test/products-db/      vendored migration fixture and source revision
+docs/                  authentication, testing and health design
+```
 
 ## Running the tests
 
-Unit (domain, use cases) and HTTP tests need nothing but Go:
+From the repository root, in PowerShell or Bash:
 
-```bash
+```text
+go build ./...
+go vet ./...
 go test ./...
 ```
 
-The PostgreSQL integration tests in `internal/adapter/out/persistence/`
-retain their existing optional unit-stage behavior. The new real health tests
-use the `integration` build tag and fail if fixture URLs are missing. CI runs
-all packages with that tag after migrating a real database, then enforces
-statement-weighted coverage: domain 90%, application 80%, infrastructure 60%,
-global 80%. The administrator URL is used only by disposable fault-injection
-tests, which remove their uniquely named database and role. To run locally:
-
-```bash
-docker network create synkro-it
-docker run -d --name synkro-it-pg --network synkro-it -p 55432:5432 -e POSTGRES_PASSWORD=it_admin_pw postgres:16-alpine
-docker exec synkro-it-pg psql -U postgres -c "CREATE ROLE products_app LOGIN PASSWORD 'it_app_pw';"
-FLYWAY_URL=jdbc:postgresql://synkro-it-pg:5432/postgres FLYWAY_USER=postgres FLYWAY_PASSWORD=it_admin_pw FLYWAY_DOCKER_NETWORK=synkro-it scripts/migrate-test-db.sh
-TEST_DATABASE_URL="postgres://products_app:it_app_pw@localhost:55432/postgres?sslmode=disable" \
-TEST_ADMIN_DATABASE_URL="postgres://postgres:it_admin_pw@localhost:55432/postgres?sslmode=disable" \
-go test -tags=integration -count=1 -coverpkg=./... -coverprofile=coverage.out ./...
-python3 scripts/check-coverage.py coverage.out
-```
-
-`test/products-db/` is a vendored copy of `synkro-products-db`'s
-migrations (that repository is private, so CI cannot check it out). After
-a migration merges there, refresh the copy with
-`scripts/sync-products-db-migrations.sh` and commit it;
-`scripts/sync-products-db-migrations.sh --check` reports drift.
+Unit and HTTP tests need Go. Some persistence tests skip without
+`TEST_DATABASE_URL`; tagged health integration tests require real fixture URLs.
+The [testing guide](docs/testing.md) preserves the disposable Docker/Flyway setup,
+real integration commands, migration synchronization and coverage gate: domain
+90%, application 80%, infrastructure 60%, global 80%.
 
 ## Branching
 
-Three permanent branches. **None of them accepts a direct commit** — you enter through a child
-branch and leave through a Pull Request.
+Permanent branches are `develop`, `qa` and `main`; work enters through child
+branches and PRs. Use `feat/`, `fix/` or `chore/` into `develop`,
+`qa-<description>` into `qa`, and `release/` or `hotfix/` into `main`.
+Promote with `git cherry-pick -x`; never merge permanent branches. `main` requires
+approval from `ariel5253`. Use English Conventional Commits. See the
+[Git conventions](https://github.com/code-corhuila/synkro-docs/blob/main/00-governance/git-conventions.md).
 
-```
-develop  <--PR--  feat/... fix/... chore/...
-qa       <--PR--  qa/...
-main     <--PR--  release/...  hotfix/...
-```
+## Further documentation
 
-Promotion happens **by re-application** (`git cherry-pick -x`), never by merging one permanent
-branch into another: `merge develop -> qa` and `merge qa -> main` do not exist in this model.
-
-`main` requires **1 approval from `ariel5253`**. On `develop` and `qa` the team sets its own review
-rule.
-
-Full policy: `00-governance/branching-policy.md` in `synkro-docs`.
+- [Authentication](docs/authentication.md): preserved JWT verification details.
+- [Testing](docs/testing.md): preserved database setup and fixture maintenance.
+- [Store health design and evidence](docs/store-health-design.md).
+- [QA promotion record (HU-PRO-15)](docs/qa-promotion.md).
+- [Domain rules](https://github.com/code-corhuila/synkro-docs/blob/main/02-domain/entities-and-rules.md),
+  [data models](https://github.com/code-corhuila/synkro-docs/blob/main/06-data/models.md)
+  and [testing strategy](https://github.com/code-corhuila/synkro-docs/blob/main/11-quality/testing-strategy.md).
