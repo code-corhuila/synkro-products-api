@@ -130,3 +130,26 @@ change is needed. Domain, authorization and reservation semantics are unchanged.
 The central documentation reconciliation remains pending: the project owner
 explicitly excluded execution of HU-DOCS-98. No QA/main rollout or central debt
 closure is claimed by these repository-local results.
+
+
+## Final Linux verification and review dependency
+
+The complete local Linux flow passed on implementation commit `c453a8e` using
+`golang:1.26.9-alpine3.23`: common files, build, vet including integration,
+unit stage (350 passing test/subtest events; the 56 legacy database skips are
+expected in that stage), domain architecture, fresh vendored V001..V020,
+integration (421 passing events, zero skips), and all coverage gates.
+The fixture matches verified Products DB commit
+`2a58ab08493080cc9af22cab72d7f2f981d0c143` from
+[DB PR23](https://github.com/code-corhuila/synkro-products-db/pull/23).
+Owned Linux resources were removed. [Record](evidence/linux-ci-verification.json).
+
+Two later Windows unit-only attempts could not start httpapi.test.exe
+(Access is denied). No security configuration was changed; the equivalent
+unit stage passed in Linux. These attempts do not count as successful runs.
+
+GitHub Actions jobs were rejected before any step because the account is
+locked due to billing. Local verification is not remote CI approval and no
+required gate is waived. Merge the DB delivery first; once its actual develop
+integration is known, refresh/confirm the fixture pin before merging this API
+delivery. Review, remote checks and subsequent promotion remain pending.
