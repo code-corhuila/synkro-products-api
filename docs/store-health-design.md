@@ -149,7 +149,16 @@ Two later Windows unit-only attempts could not start httpapi.test.exe
 unit stage passed in Linux. These attempts do not count as successful runs.
 
 GitHub Actions jobs were rejected before any step because the account is
-locked due to billing. Local verification is not remote CI approval and no
-required gate is waived. Merge the DB delivery first; once its actual develop
-integration is known, refresh/confirm the fixture pin before merging this API
-delivery. Review, remote checks and subsequent promotion remain pending.
+locked due to billing; they never executed steps and are not recorded as
+passing. That historical evidence and the Linux verification above are kept
+as is. On 2026-11-14 (America/Bogota) the owner decided that this GitHub
+Actions billing failure is not to be treated as an impediment to this
+delivery. The exception covers billing only: it does not remove review,
+integrity checks, tests or the branch policy. Local verification is not
+remote CI approval. Products DB PR23 is now integrated into develop as
+`0867b1e98e65ed3c24a170248961ef04d1a44a89`. Its tree equals the tested
+`2a58ab08493080cc9af22cab72d7f2f981d0c143`, and every committed vendored
+migration/config blob matches that integration. SOURCE_COMMIT now points to
+the actual develop merge. Only provenance and this status changed, so no new
+test execution is claimed. [Integration evidence](evidence/db-develop-integration.json).
+API review/integration and subsequent promotion remain pending.
