@@ -6,8 +6,9 @@ Proposal to promote the Products API store-health delivery of HU-PRO-15
 (synkro-docs#317) from `qa` to `main`, requested by the owner after both QA
 PR24 deliveries were merged. The approved scope is narrow: TD017 own-store
 health, with its fixture consuming the paired DB delivery (TD018).
-This is a fresh local verification of a proposal. It is **not** an actual merge
-into `main`, **not** a persistent deployment and **not** a tag. Historical
+This is a local verification of a proposal, plus a provenance-only update after
+the paired DB `main` merge. It is **not** an actual merge of the API into
+`main`, **not** a persistent deployment and **not** a tag. Historical
 QA/develop execution evidence and trails stay separate and unchanged; only
 their current-status links are updated.
 
@@ -19,12 +20,17 @@ their current-status links are updated.
 | Main base | `8c04934ae5b51417a0b88506cc59734ef7913e64` |
 | Previous QA head | `22245634d2f10a5667899a24d5c1511d4f3a0891` |
 | Candidate (tested) | `47c8e9dbe8e1e8240d7c7376ff1bcaadcdc6cd5e` |
-| Fixture `SOURCE_COMMIT` pin (actual integrated DB QA) | `89cd9a670d3e540c3cc524411ff77c058f1b8960` |
+| Fixture `SOURCE_COMMIT` pin, current (actual DB `main` merge, DB PR25) | `9c52d7761d8a32f679261f71c76528f0b0ec9bd7` |
+| Fixture `SOURCE_COMMIT` pin, historical (actual integrated DB QA; pin of candidate `47c8e9db…` and of its validation run) | `89cd9a670d3e540c3cc524411ff77c058f1b8960` |
 | Branch | `release/products-store-health` |
 
 The API QA merge was actually performed by the owner on 2026-11-14 21:34:11
-America/Bogota; the DB QA merge (`89cd9a67…`) on 2026-11-14 21:27:34. No actual
-`main` merge SHA exists yet and none is claimed. No merge between permanent
+America/Bogota; the DB QA merge (`89cd9a67…`) on 2026-11-14 21:27:34. The DB
+`main` merge (DB PR25, `9c52d776…`) was merged on 2026-11-14 21:53:57
+America/Bogota; evidence:
+[`docs/evidence/main-db-integration.json`](evidence/main-db-integration.json).
+API `main` PR25 is still open: no actual API `main` merge SHA exists and none
+is claimed. No merge between permanent
 branches was made and nothing was committed directly to a permanent branch; all
 six source commits were reapplied on the release branch with `cherry-pick -x`.
 Policy:
@@ -76,20 +82,35 @@ commit message carries the literal line shown.
 The candidate tree is identical to the tree of integrated QA
 `4f0f15be88156ed86ec6755d679721ea026d71f0`, before this documentation was
 added. No new production code, configuration, schema, test, credential or
-`.github` change is made. Added on top of the tested candidate: this report, the fresh verification
-JSON and current-status links in the QA report and health design. CODEOWNERS is unchanged.
+`.github` change is made. Added on top of the tested candidate: this report, the
+verification JSON, the DB integration JSON, the `SOURCE_COMMIT` pin update and
+current-status links in the QA report and health design. CODEOWNERS is unchanged.
 
-`test/products-db/SOURCE_COMMIT` remains the actual integrated DB QA commit
-`89cd9a670d3e540c3cc524411ff77c058f1b8960`. It is valid actual QA content and
-matches both candidates; it is not an actual DB `main` merge SHA.
+`test/products-db/SOURCE_COMMIT` now pins the actual DB `main` merge
+`9c52d7761d8a32f679261f71c76528f0b0ec9bd7` (DB PR25), replacing the actual
+integrated DB QA commit `89cd9a670d3e540c3cc524411ff77c058f1b8960`, which
+remains the historical pin of the tested candidate. Per
+`docs/evidence/main-db-integration.json`, the DB merge tree equals the tree of
+published DB head `0fde8170f92cf377e6cb103e3e65bd050b008d5c`; all 38
+vendored migration/config/placeholder blobs are identical; only 3 docs differ
+from the tested DB candidate `5030b3d490d046d9abd4837b0240f2c40e9a8e0d`.
 
-## Fresh validation (local Linux, on the candidate)
+Current scope of this change: documentation, `SOURCE_COMMIT` provenance and the
+new JSON evidence only. No SQL, Go, test or runtime configuration changed and
+no deployment is performed by this task.
+
+## Historical validation (local Linux, on the candidate)
+
+This is the run on API candidate `47c8e9dbe8e1e8240d7c7376ff1bcaadcdc6cd5e` with
+the then-current fixture pin `89cd9a670d3e540c3cc524411ff77c058f1b8960`. No new
+test run was made after the DB `main` merge: the SQL, Go, tests and runtime
+configuration are identical, so this result is preserved, not re-executed.
 
 Evidence: `docs/evidence/main-promotion-verification.json`. Run on
 `golang:1.26.9-alpine3.23` (Go 1.26.9), 2026-11-14 21:37–21:38 America/Bogota (JSON timestamps are UTC), API commit
 `47c8e9dbe8e1e8240d7c7376ff1bcaadcdc6cd5e` with DB fixture
-`89cd9a670d3e540c3cc524411ff77c058f1b8960`; passed. This run was executed now
-on the main candidate; QA and develop evidence is not claimed as newly executed.
+`89cd9a670d3e540c3cc524411ff77c058f1b8960`; passed. QA and develop evidence is
+not claimed as newly executed.
 
 - Stages: common files, build, vet (including integration), unit, domain
   architecture, integration.
@@ -109,8 +130,8 @@ on the main candidate; QA and develop evidence is not claimed as newly executed.
 
 No new compiled-process stop/restart run was made for `main`. The earlier
 15-check process run (`docs/evidence/process-outage-and-reservations.json`)
-remains develop history only; the fresh `main` health HTTP and PostgreSQL
-integration tests were executed.
+remains develop history only; the `main` candidate health HTTP and PostgreSQL
+integration tests were executed in the historical run above.
 
 ## Pact scope
 
@@ -134,13 +155,17 @@ removed.
 
 ## Order, review and remaining evidence
 
-- The owner alone merges. Order: approve/review/merge the DB `main` PR first.
-  Then confirm/update the API fixture provenance from the actual DB `main`
-  integration before the final API review and merge.
-- `main` requires current approval by ariel5253 on the delivered head, plus the
-  existing conversation/review rules. QA/develop approvals do not transfer and
-  CODEOWNERS is not changed. No teacher approval is claimed.
-- Not claimed: an actual `main` merge, a persistent deployment, and inspection
+- The owner alone merges. The DB `main` PR25 was merged first (see above) and
+  the API fixture provenance now points to that actual DB `main` merge. The
+  API `main` PR25 remains pending its final review and owner merge.
+- `main` requires current approval by ariel5253 on the final API head, plus the
+  existing conversation/review rules; that approval is pending. The DB review
+  snapshot is `[]`: no ariel5253 approval is recorded and none is inferred from
+  the DB merge. QA/develop approvals do not transfer and CODEOWNERS is not
+  changed. No teacher approval is claimed.
+- The billing exception above is not extended to review.
+- No auto-merge, tag, deployment or HU closure is performed.
+- Not claimed: an actual API `main` merge, a persistent deployment, and inspection
   of target-environment owners, default privileges or duplicate data (disposable
   tests do not provide these; target creator/default-privileges/duplicate
   preflight evidence remains to be supplied).
