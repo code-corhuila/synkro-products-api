@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-15",
+  "observer": "Codex",
+  "postgres": "16.15-alpine3.23",
+  "flyway": "11.20.3-alpine",
+  "go": "1.27.0 windows/amd64",
+  "scope": "Disposable local PostgreSQL; existing environment data untouched",
+  "hosted_actions": "Not credited as passing; latest observed runs did not start due to account billing lock.",
+  "issue": 273,
+  "red": {
+    "observed": true,
+    "before_completion": "New HTTP history test returned 404; new adapter contract did not compile because update/history methods were absent. Domain value scaffold had already been authored by Claude.",
+    "command": "go test ./internal/adapter/out/persistence ./internal/adapter/in/httpapi ./internal/domain/model"
+  },
+  "green": {
+    "observed": true,
+    "passed": [
+      "go vet ./...",
+      "go test -tags=integration -count=1 -coverpkg=./... -coverprofile=coverage.out ./...",
+      "python scripts/check-coverage.py coverage.out"
+    ],
+    "assertions": [
+      "Two INVENTORY authors via real HTTP and PostgreSQL, ordered history",
+      "Client changedBy/changedAt ignored; invalid signature cannot change price/history",
+      "Same price creates no event",
+      "Duplicate history id rolls catalog UPDATE back",
+      "Eight concurrent writers preserve contiguous prior/new prices and sequence",
+      "Deactivation preserves newest price and stock",
+      "401/403/404 and bounded pagination"
+    ]
+  },
+  "coverage": {
+    "domain": {
+      "covered": 53,
+      "statements": 53,
+      "percentage": 100.0,
+      "minimum": 90,
+      "passed": true
+    },
+    "application": {
+      "covered": 170,
+      "statements": 186,
+      "percentage": 91.4,
+      "minimum": 80,
+      "passed": true
+    },
+    "infrastructure": {
+      "covered": 1311,
+      "statements": 1433,
+      "percentage": 91.49,
+      "minimum": 60,
+      "passed": true
+    },
+    "global": {
+      "covered": 1556,
+      "statements": 1737,
+      "percentage": 89.58,
+      "minimum": 80,
+      "passed": true
+    }
+  },
+  "canonical_docs": "Deferred by user; 06-data/models.md and traceability unchanged."
+}
