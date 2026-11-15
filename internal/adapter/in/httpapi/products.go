@@ -149,7 +149,12 @@ func (h productHandlers) update(w http.ResponseWriter, r *http.Request) {
 		writeValidationError(w, r, details)
 		return
 	}
-	res, err := h.uc.UpdateProduct(r.Context(), id, in.UpdateProductCommand{Name: name, PriceCents: price, CategoryID: categoryID})
+	subject, ok := subjectFrom(r)
+	if !ok {
+		forbid(w, r)
+		return
+	}
+	res, err := h.uc.UpdateProduct(r.Context(), id, in.UpdateProductCommand{Name: name, PriceCents: price, CategoryID: categoryID, ChangedBy: subject})
 	if err != nil {
 		writeUseCaseError(w, r, err)
 		return

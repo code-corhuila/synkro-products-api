@@ -12,6 +12,7 @@ import (
 // Every authenticated route of the service, with method and a concrete
 // path. A 401 must be answered before any of them reaches a handler.
 var allProtectedRoutes = []struct{ method, path string }{
+	{"GET", "/api/v1/products/0192a000-0000-7000-8000-0000000000b1/price-history"},
 	{"GET", "/api/v1/products"},
 	{"POST", "/api/v1/products"},
 	{"GET", "/api/v1/products/0192a000-0000-7000-8000-0000000000b1"},

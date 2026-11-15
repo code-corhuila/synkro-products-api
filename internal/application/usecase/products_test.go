@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/code-corhuila/synkro-products-api/internal/application/port/in"
 	"github.com/code-corhuila/synkro-products-api/internal/application/port/out"
@@ -16,7 +17,7 @@ var (
 )
 
 func newProductService(ps *fakeProducts, cs *fakeCategories) *ProductService {
-	return NewProductService(ps, cs, sequentialIDs("prod"))
+	return NewProductService(ps, cs, sequentialIDs("prod"), ps, ps, time.Now)
 }
 
 func validCreate(key string) in.CreateProductCommand {
@@ -166,7 +167,7 @@ func TestUpdateProduct_ChangesDetailsAndKeepsStock(t *testing.T) {
 	ps := newFakeProducts(p)
 	svc := newProductService(ps, newFakeCategories(activeCat, other))
 
-	res, err := svc.UpdateProduct(context.Background(), "p1", in.UpdateProductCommand{Name: "Headset", PriceCents: 200, CategoryID: other.ID})
+	res, err := svc.UpdateProduct(context.Background(), "p1", in.UpdateProductCommand{Name: "Headset", PriceCents: 200, CategoryID: other.ID, ChangedBy: "inventory"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
