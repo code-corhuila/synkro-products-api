@@ -1,0 +1,57 @@
+{
+  "date": "2026-11-15",
+  "observer": "Codex",
+  "postgres": "16.15-alpine3.23",
+  "flyway": "11.20.3-alpine",
+  "go": "1.27.0 windows/amd64",
+  "scope": "Disposable local PostgreSQL; existing environment data untouched",
+  "hosted_actions": "Not credited as passing; latest observed runs did not start due to account billing lock.",
+  "issue": 271,
+  "passed": [
+    "go vet ./...",
+    "go test -tags=integration -count=1 -coverpkg=./... -coverprofile=coverage.out ./...",
+    "python scripts/check-coverage.py coverage.out",
+    "dedicated negative-auth command: four regression tests plus TestAuth_*"
+  ],
+  "mutation": {
+    "observed": true,
+    "change": "In a separate non-Git copy only, replace signature verification with ParseUnverified",
+    "result": "TestSecurityNegativeAuth_* fails assertions; compilation succeeds"
+  },
+  "coverage": {
+    "domain": {
+      "covered": 46,
+      "statements": 46,
+      "percentage": 100.0,
+      "minimum": 90,
+      "passed": true
+    },
+    "application": {
+      "covered": 160,
+      "statements": 177,
+      "percentage": 90.4,
+      "minimum": 80,
+      "passed": true
+    },
+    "infrastructure": {
+      "covered": 1200,
+      "statements": 1293,
+      "percentage": 92.81,
+      "minimum": 60,
+      "passed": true
+    },
+    "global": {
+      "covered": 1428,
+      "statements": 1581,
+      "percentage": 90.32,
+      "minimum": 80,
+      "passed": true
+    }
+  },
+  "merge_gate": {
+    "required_status_checks": false,
+    "branch": "develop",
+    "rules_for_develop": [],
+    "required_action": "Repository administrator must require security-negative-auth. No protections were changed."
+  }
+}
