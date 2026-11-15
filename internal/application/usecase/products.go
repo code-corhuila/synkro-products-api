@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/code-corhuila/synkro-products-api/internal/application/port/in"
 	"github.com/code-corhuila/synkro-products-api/internal/application/port/out"
@@ -13,14 +14,17 @@ type ProductService struct {
 	products   out.ProductRepository
 	categories out.CategoryRepository
 	newID      func() string
+	updates    out.ProductUpdateUnit
+	history    out.PriceHistoryRepository
+	now        func() time.Time
 }
 
 var _ in.ProductUseCases = (*ProductService)(nil)
 
 // NewProductService takes the id generator so ids are always made here,
 // in Go — product_id has no DEFAULT in products_schema.
-func NewProductService(products out.ProductRepository, categories out.CategoryRepository, newID func() string) *ProductService {
-	return &ProductService{products: products, categories: categories, newID: newID}
+func NewProductService(products out.ProductRepository, categories out.CategoryRepository, newID func() string, updates out.ProductUpdateUnit, history out.PriceHistoryRepository, now func() time.Time) *ProductService {
+	return &ProductService{products: products, categories: categories, newID: newID, updates: updates, history: history, now: now}
 }
 
 func (s *ProductService) CreateProduct(ctx context.Context, cmd in.CreateProductCommand) (in.CreateProductResult, error) {
@@ -84,27 +88,43 @@ func (s *ProductService) UpdateProduct(ctx context.Context, id string, cmd in.Up
 	if err := requireActiveCategory(ctx, s.categories, cmd.CategoryID); err != nil {
 		return in.UpdateProductResult{}, err
 	}
-	if err := s.products.Update(ctx, p); err != nil {
+
+	updated, err := s.updates.Apply(ctx, id, func(current model.Product) (model.Product, *model.PriceChange, error) {
+		next := current
+		if err := next.UpdateDetails(cmd.Name, cmd.PriceCents, cmd.CategoryID); err != nil {
+			return current, nil, err
+		}
+		if current.PriceCents == next.PriceCents {
+			return next, nil, nil
+		}
+		h, err := model.NewPriceChange(s.newID(), id, current.PriceCents, next.PriceCents, cmd.ChangedBy, s.now())
+		return next, &h, err
+	})
+	if err != nil {
 		return in.UpdateProductResult{}, notFoundAs(err, in.ErrProductNotFound)
 	}
-	return in.UpdateProductResult{Product: p}, nil
+	return in.UpdateProductResult{Product: updated}, nil
 }
 
 // DeactivateProduct is idempotent: an already-inactive product is
 // returned as it is, with no write.
 func (s *ProductService) DeactivateProduct(ctx context.Context, id string) (in.DeactivateProductResult, error) {
-	p, err := s.find(ctx, id)
+	p, err := s.updates.Apply(ctx, id, func(current model.Product) (model.Product, *model.PriceChange, error) {
+		current.Deactivate()
+		return current, nil, nil
+	})
 	if err != nil {
-		return in.DeactivateProductResult{}, err
-	}
-	if !p.Active {
-		return in.DeactivateProductResult{Product: p}, nil
-	}
-	p.Deactivate()
-	if err := s.products.Update(ctx, p); err != nil {
 		return in.DeactivateProductResult{}, notFoundAs(err, in.ErrProductNotFound)
 	}
 	return in.DeactivateProductResult{Product: p}, nil
+}
+
+func (s *ProductService) ListPriceHistory(ctx context.Context, q in.ListPriceHistoryQuery) (in.ListPriceHistoryResult, error) {
+	items, total, err := s.history.ListByProduct(ctx, q.ProductID, q.Page, q.Limit)
+	if err != nil {
+		return in.ListPriceHistoryResult{}, notFoundAs(err, in.ErrProductNotFound)
+	}
+	return in.ListPriceHistoryResult{Items: items, Total: total}, nil
 }
 
 func (s *ProductService) find(ctx context.Context, id string) (model.Product, error) {

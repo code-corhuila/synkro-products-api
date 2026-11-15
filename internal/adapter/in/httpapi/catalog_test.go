@@ -53,7 +53,7 @@ func newTestAPIWithHealth(t *testing.T, health in.HealthUseCases) *testAPI {
 	}
 	router := NewRouter(
 		verifier,
-		usecase.NewProductService(mem.Products(), mem.Categories(), newID),
+		usecase.NewProductService(mem.Products(), mem.Categories(), newID, mem.ProductUpdates(), mem.PriceHistory(), time.Now),
 		usecase.NewCategoryService(mem.Categories(), newID),
 		usecase.NewStockService(mem.StockAdjustments(), mem.StockReservations(), newID),
 		usecase.NewStockAlertService(mem.StockAlerts(), newID, time.Now),

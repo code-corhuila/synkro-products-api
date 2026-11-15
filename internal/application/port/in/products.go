@@ -39,6 +39,10 @@ type UpdateProductCommand struct {
 	Name       string
 	PriceCents int64
 	CategoryID string
+
+	// ChangedBy is the verified identity of the caller, recorded in the price
+	// history when the price changes. It is never taken from the request body.
+	ChangedBy string
 }
 
 type UpdateProductResult struct {
@@ -50,6 +54,7 @@ type DeactivateProductResult struct {
 }
 
 type ProductUseCases interface {
+	PriceHistoryUseCases
 	CreateProduct(ctx context.Context, cmd CreateProductCommand) (CreateProductResult, error)
 	ListProducts(ctx context.Context, q ListProductsQuery) (ListProductsResult, error)
 	GetProduct(ctx context.Context, id string) (GetProductResult, error)
