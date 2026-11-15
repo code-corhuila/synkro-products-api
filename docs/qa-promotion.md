@@ -16,7 +16,14 @@ Historical develop evidence in `docs/evidence/` is kept separate and unchanged.
 | QA base | `22245634d2f10a5667899a24d5c1511d4f3a0891` |
 | Candidate (tested) | `e46ac534638e34ec56be55ab14107ce93f2599ac` |
 | Branch | `qa-products-store-health` |
-| Integrated DB develop (fixture `SOURCE_COMMIT`) | `0867b1e98e65ed3c24a170248961ef04d1a44a89` |
+| Integrated DB QA (current fixture `SOURCE_COMMIT` pin) | `89cd9a670d3e540c3cc524411ff77c058f1b8960` |
+| Previous pin (DB develop; historical, used by the tested candidate run) | `0867b1e98e65ed3c24a170248961ef04d1a44a89` |
+
+DB QA PR24 ([synkro-products-db#24](https://github.com/code-corhuila/synkro-products-db/pull/24))
+was actually merged into DB QA as `89cd9a670d3e540c3cc524411ff77c058f1b8960`
+on 2026-11-14 21:27:34 America/Bogota. The API QA PR (#24) remains open.
+Evidence of the DB integration (read-only, produced by Codex):
+[`docs/evidence/qa-db-integration.json`](evidence/qa-db-integration.json).
 
 The QA child uses the repository's existing `qa-...` naming: GitHub rejected
 `qa/...` with a directory/file conflict against the permanent `qa` ref.
@@ -55,12 +62,30 @@ Each QA commit message carries the literal line shown.
 
 The candidate tree is identical to the tree of develop source
 `ee50bb7c6c1d2b88ce9e83eec17751961f4883cf`. Runtime code, tests and
-configuration match develop exactly; the only change added on top of the tested
-candidate is documentation (this report, the fresh verification JSON and the final status sentence of
-`docs/store-health-design.md`). CODEOWNERS is unchanged. TD012 is excluded.
+configuration match develop exactly; the only changes added on top of the tested
+candidate are documentation and provenance (this report, the verification and
+DB-integration JSON files, the final status sentence of
+`docs/store-health-design.md`, and the `test/products-db/SOURCE_COMMIT` pin
+moved from `0867b1e9…` to `89cd9a67…`). Production SQL/Go, tests and runtime
+configuration are identical to the candidate; no new test run was made for the
+pin update. CODEOWNERS is unchanged. TD012 (open) is excluded.
 HU-DOCS-98 is untouched.
 
+DB QA integration (see `docs/evidence/qa-db-integration.json`): the DB QA merge
+tree equals the published DB head
+`fb1192226831e55ca3ae03166c65126fa34b6efa`; all 38 vendored API
+migration/config/placeholder blobs match the real DB QA merge; and the DB
+runtime content equals the tested DB candidate
+`ce8fd682e143049977302b1666e8e69bf3dedafa` (only two QA docs differ). The
+preserved validation below therefore still applies to identical executable
+content.
+
 ## Fresh validation (local Linux, on the candidate)
+
+Historical verification: it was executed on API candidate
+`e46ac534638e34ec56be55ab14107ce93f2599ac` with the then-current fixture pin
+`0867b1e98e65ed3c24a170248961ef04d1a44a89`. It is not re-run for pin
+`89cd9a67…`; that pin is provenance only (see above).
 
 Evidence: `docs/evidence/qa-promotion-verification.json`. Run on
 `golang:1.26.9-alpine3.23` (Go 1.26.9), 2026-11-14 America/Bogota (JSON timestamps are UTC), API commit
@@ -77,8 +102,9 @@ Evidence: `docs/evidence/qa-promotion-verification.json`. Run on
 - Format: all 70 committed Go source files (LF) pass `gofmt`.
 - Fixture: all 38 vendored DB migration/config/placeholder blobs match the DB QA
   candidate `ce8fd682e143049977302b1666e8e69bf3dedafa`; `SOURCE_COMMIT` points
-  to the actual integrated DB develop commit
-  `0867b1e98e65ed3c24a170248961ef04d1a44a89`.
+  to the then-integrated DB develop commit
+  `0867b1e98e65ed3c24a170248961ef04d1a44a89` (historical pin of this run; the
+  current pin is DB QA `89cd9a67…`, with the same 38 blobs).
 - No owned containers or networks remain.
 
 No new process-outage run was made for QA. The earlier 15-check process run
@@ -113,12 +139,14 @@ Review, integrity checks, tests and branch rules still apply.
 
 ## Order, merge and limits
 
-- The owner alone merges. Order: review/merge the DB QA PR first; then confirm
-  or refresh the API fixture provenance against the actual QA-integrated DB
-  before the API QA merge.
+- The owner alone merges. Status: the DB QA dependency (PR24) is merged and the
+  API fixture pin check against the actual QA-integrated DB is complete
+  (`SOURCE_COMMIT` = `89cd9a67…`). The API QA PR is pending owner
+  review/merge.
 - `main` is considered only after both real QA integrations exist, via new PRs
   from the actual QA commits with `cherry-pick -x`, and requires approval by
-  ariel5253. Develop/QA approvals do not transfer.
+  ariel5253. Develop/QA approvals do not transfer. Nothing for `main` is
+  prepared or declared here.
 - Not claimed: a persistent QA deployment, and inspection of target-environment
   owners, default privileges or duplicate data (disposable tests do not show
   these).
