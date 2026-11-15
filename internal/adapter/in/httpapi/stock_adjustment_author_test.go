@@ -67,7 +67,7 @@ func newAuthorAPI(t *testing.T) *authorAPI {
 	}
 	router := NewRouter(
 		verifier,
-		usecase.NewProductService(mem.Products(), mem.Categories(), newID),
+		usecase.NewProductService(mem.Products(), mem.Categories(), newID, mem.ProductUpdates(), mem.PriceHistory(), time.Now),
 		usecase.NewCategoryService(mem.Categories(), newID),
 		usecase.NewStockService(recording, mem.StockReservations(), newID),
 		usecase.NewStockAlertService(mem.StockAlerts(), newID, time.Now),
