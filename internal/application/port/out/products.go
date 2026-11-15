@@ -29,7 +29,9 @@ type ProductRepository interface {
 	FindByID(ctx context.Context, id string) (model.Product, error) // ErrNotFound if absent
 	List(ctx context.Context, f ProductFilter) (items []model.Product, total int, err error)
 	// Update replaces every catalog column (name, price, category, active),
-	// used by both update and deactivate. It never writes stock: stock is
+	// retained for direct adapter compatibility. Application catalog updates
+	// and deactivation use ProductUpdateUnit instead, with atomic audit.
+	// This low-level operation never writes stock: stock is
 	// changed concurrently by reservations and adjustments (HU-PRO-09), so
 	// writing back the stock read earlier would silently undo them.
 	Update(ctx context.Context, p model.Product) error // ErrNotFound if absent

@@ -30,3 +30,15 @@ migrations (that repository is private, so CI cannot check it out). After
 a migration merges there, refresh the copy with
 `scripts/sync-products-db-migrations.sh` and commit it;
 `scripts/sync-products-db-migrations.sh --check` reports drift.
+
+
+## Product price history
+
+See [design](price-history-design.md) and [OpenAPI extension](price-history.openapi.yaml).
+The history tests exercise two verified INVENTORY identities, a forged client
+author and invalid signature, unchanged price, UTC time, role/permission checks,
+pagination, and an actual PostgreSQL history query. The shared adapter contract
+tests prove unique-id insert failure rolls back the catalog change, concurrent
+writers form a contiguous price chain, and deactivation preserves the latest price
+and stock. Run the integration command above after applying Products DB V021–V024.
+The application now requires explicit update-unit and history-reader ports.

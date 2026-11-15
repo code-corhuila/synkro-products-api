@@ -1,0 +1,96 @@
+openapi: 3.0.3
+info:
+  title: Products price history extension
+  version: 1.0.0
+  description: Local contract extension for issue 273; canonical synkro-docs reconciliation is deferred.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /products/{id}/price-history:
+    get:
+      operationId: listProductPriceHistory
+      summary: List price changes, newest sequence first
+      description: Requires a human ADMIN or INVENTORY and products:read. Includes inactive products. PUT price changes atomically record the verified subject; client author/time fields are ignored.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 2147483647, default: 1}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Price history page, including empty history
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/PriceChange'}
+                  meta:
+                    type: object
+                    required: [page, limit, total, totalPages]
+                    properties:
+                      page: {type: integer}
+                      limit: {type: integer}
+                      total: {type: integer}
+                      totalPages: {type: integer}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT RS256}
+  schemas:
+    PriceChange:
+      type: object
+      required: [historyId, productId, sequence, oldPriceCents, newPriceCents, changedBy, changedAt]
+      properties:
+        historyId: {type: string, format: uuid}
+        productId: {type: string, format: uuid}
+        sequence: {type: integer, format: int64, minimum: 1}
+        oldPriceCents: {type: integer, format: int64, minimum: 1}
+        newPriceCents: {type: integer, format: int64, minimum: 1}
+        changedBy: {type: string, format: uuid}
+        changedAt: {type: string, format: date-time, description: RFC3339 UTC instant}
+    Error:
+      type: object
+      required: [error, message, traceId]
+      properties:
+        error: {type: string}
+        message: {type: string}
+        traceId: {type: string}
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field: {type: string}
+              message: {type: string}
+  responses:
+    BadRequest:
+      description: Invalid pagination or unknown query parameter
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    Unauthorized:
+      description: Missing, invalid or expired RS256 token
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    Forbidden:
+      description: Verified caller without the required human role and permission
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    NotFound:
+      description: Product does not exist or the identifier is malformed
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    InternalError:
+      description: Unexpected failure with no storage details disclosed
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
