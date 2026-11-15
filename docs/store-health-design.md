@@ -1,7 +1,7 @@
 # Store health (HU-PRO-15, TD-017): design
 
-Status: design written before code. Nothing described here has been executed;
-see "Pending executions".
+Status: design/tests and inert compile-only signatures preceded implementation
+in `7a516ae`. Assertion RED and final real-engine verification are below.
 
 ## Behavior
 
@@ -75,21 +75,58 @@ shared constructor changed: it now supplies an explicit `healthyFixture`.
 - A closed pool, a locked table and a closed port stand in for outages. Stopping
   and restarting a real database under a running API process is done later by
   hand and is not part of these tests.
-- Not specified: whether a nil port is refused at wiring or answers 503. The
-  tests accept either, and reject a 200.
-- Not specified: whether a non-positive timeout panics at construction or fails
-  closed at check time. Same rule.
+- A nil router health port fails closed with 503.
+- A nil store or nonpositive timeout is a composition error rejected by the
+  health-service constructor.
 - A real `StoreHealth` that ignores its context is a port bug and is not worked
   around; only the parent's cancellation is checked by the use case.
 
 ## Out of scope
 
-No other API change, no new ADR, no auth or other-service dependency, no CI or
-README edit yet, and no copy of the new migrations into `test/products-db`
-until the owning DB delivery is verified.
+No business API change, new ADR, auth dependency or other-service health probe.
+The vendored fixture is pinned only after verification of the owning DB delivery.
 
-## Pending executions
+## Executed verification and traceability
 
-Nothing here has been run: not the compile (the ports, service and router
-argument do not exist yet), not RED, not the integration tests, not the real
-outage run. They are executed and recorded after this document.
+- Baseline develop: `af06bb056fedb7b9f83d518436c3370a0f1373d1`.
+- Tests first: `7a516ae`, with inert compile-only interfaces preserving the old
+  unconditional liveness. Compilation gaps were recorded separately; real RED
+  had 38 failed test/subtest events, no skips or compiler/setup failure.
+  [RED record](evidence/store-health-tdd.json).
+- A strict consecutive-clock comparison failed on Windows because two calls
+  shared one clock tick. The test now proves distinct derived contexts, correct
+  deadline ordering and cancellation after return; the production code did not
+  change for this adjustment. All 44 health test/subtest events then passed.
+- Complete real-PostgreSQL suite on V020: 282 top-level tests,
+  421 passing test/subtest events, zero failures/skips. Go 1.26.9.
+  Coverage includes calls across packages and merges repeated profile blocks:
+  domain 100%, application 90.4%, infrastructure 91.42%, global 89.9%.
+  Build, vet with integration tag and domain architecture check passed.
+  [Verification](evidence/store-health-verification.json).
+- A running compiled API completed 15 HTTP checks: create/replay reservation,
+  frozen price after catalog update, duplicate request rejection, release/replay
+  with stock restored; then actual PostgreSQL stop produced 503 and restart
+  restored 200 in the same API process. No response/log credential leakage.
+  [Process evidence](evidence/process-outage-and-reservations.json).
+- Two earlier process runs exposed fixture limitations (tmpfs data loss, then
+  Docker's reassigned random host port). They were not API failures or counted
+  as successful recovery. The passing run used disposable storage and a fixed
+  loopback port. A coverage run against the retired fixture failed setup and
+  was repeated on the restored migrated fixture; final evidence is explicit.
+
+| Requirements | Story | Tests | Code |
+|---|---|---|---|
+| NFR-002/006 | HU-PRO-15 | TestHealthService_* | application/port/{in,out}/health.go, usecase/health.go |
+| NFR-002/004 | HU-PRO-15 | TestStoreHealthHTTP_* | httpapi/handler.go, cmd/products-api/main.go |
+| NFR-002/009 | HU-PRO-15 | TestPostgresHealth_*, real outage | persistence/health.go |
+| FR-004/007, NFR-009 | HU-PRO-15 | existing real reservation tests, process lifecycle | unchanged reservation code + pinned V018..V020 fixture |
+
+Sources: [cross-cutting health design](https://github.com/code-corhuila/synkro-docs/blob/main/05-architecture/cross-cutting.md),
+[Products OpenAPI](https://github.com/code-corhuila/synkro-docs/blob/main/07-api/contracts/openapi/synkro-products-api.yaml),
+and [HU-PRO-15](https://github.com/code-corhuila/synkro-docs/issues/317).
+The accepted HealthResponse already permits dependencies.database; no contract
+change is needed. Domain, authorization and reservation semantics are unchanged.
+
+The central documentation reconciliation remains pending: the project owner
+explicitly excluded execution of HU-DOCS-98. No QA/main rollout or central debt
+closure is claimed by these repository-local results.

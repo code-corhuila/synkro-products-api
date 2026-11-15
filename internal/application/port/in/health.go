@@ -2,4 +2,5 @@ package in
 
 import "context"
 
-type HealthUseCases interface { Healthy(context.Context) bool }
+// HealthUseCases exposes availability without exposing infrastructure errors.
+type HealthUseCases interface{ Healthy(context.Context) bool }
