@@ -3,8 +3,9 @@
 HU-DOCS-99: code-corhuila/synkro-docs#320. Owner: SantiagoPlazas2005.
 Branch: `chore/clean-up-readme`, based on develop `ee50bb7`.
 The project user authorized publication of this pilot with SantiagoPlazas2005
-as commit author and AsolanoT as PR author. The other 17 README implementations
-await format review; AUTH-19 working copies remain unchanged.
+as commit author and AsolanoT as PR author, and subsequently authorized rollout
+to the other 17 repositories through their own PRs. AUTH-19 working copies
+remain unchanged.
 
 ## Inventory
 
@@ -42,9 +43,8 @@ source of current implementation claims.
 
 ## Rollout
 
-Review the pilot before extending the format. Inventory the existing detail in
-each remaining README before moving it; create every destination document before
-replacing links. Reconcile Auth with the actual AUTH-19 delivery and infrastructure
-last, accounting for HU-INF-08's delivered development-deployment command.
-This pilot enters develop through its own PR; review the format before preparing
-the remaining repositories. Their publication requires its own authorized scope.
+The project user authorized extension of the format to the remaining repositories.
+Each owning PR inventories and preserves its detailed procedures before replacing
+links. Auth follows the merged AUTH-19 delivery, and infrastructure incorporates
+HU-INF-08's delivered development-deployment command. Each repository enters
+develop through its own documentation PR and retains its actual review status.
