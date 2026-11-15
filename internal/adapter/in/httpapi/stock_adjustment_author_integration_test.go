@@ -38,7 +38,7 @@ func newPostgresAuthorAPI(t *testing.T) *pgAuthorAPI {
 	}
 	router := NewRouter(
 		verifier,
-		usecase.NewProductService(db.Products(), db.Categories(), newID),
+		usecase.NewProductService(db.Products(), db.Categories(), newID, db.ProductUpdates(), db.PriceHistory(), time.Now),
 		usecase.NewCategoryService(db.Categories(), newID),
 		usecase.NewStockService(db.StockAdjustments(), db.StockReservations(), newID),
 		usecase.NewStockAlertService(db.StockAlerts(), newID, time.Now),
