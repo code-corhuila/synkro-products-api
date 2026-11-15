@@ -1,5 +1,9 @@
 # Products API — QA promotion proposal (HU-PRO-15)
 
+Current status: both QA PR24 integrations are complete. DB: `89cd9a670d3e540c3cc524411ff77c058f1b8960`; API: `4f0f15be88156ed86ec6755d679721ea026d71f0`.
+The current [main proposal](main-promotion.md) remains pending review/integration.
+The candidate executions and trails below remain historical QA evidence.
+
 ## Purpose
 
 Proposal to promote the Products API store-health delivery of HU-PRO-15
@@ -21,7 +25,8 @@ Historical develop evidence in `docs/evidence/` is kept separate and unchanged.
 
 DB QA PR24 ([synkro-products-db#24](https://github.com/code-corhuila/synkro-products-db/pull/24))
 was actually merged into DB QA as `89cd9a670d3e540c3cc524411ff77c058f1b8960`
-on 2026-11-14 21:27:34 America/Bogota. The API QA PR (#24) remains open.
+on 2026-11-14 21:27:34 America/Bogota. API QA PR24 was integrated as `4f0f15be88156ed86ec6755d679721ea026d71f0`
+on 2026-11-14 at 21:34:11 America/Bogota.
 Evidence of the DB integration (read-only, produced by Codex):
 [`docs/evidence/qa-db-integration.json`](evidence/qa-db-integration.json).
 
@@ -139,14 +144,12 @@ Review, integrity checks, tests and branch rules still apply.
 
 ## Order, merge and limits
 
-- The owner alone merges. Status: the DB QA dependency (PR24) is merged and the
-  API fixture pin check against the actual QA-integrated DB is complete
-  (`SOURCE_COMMIT` = `89cd9a67…`). The API QA PR is pending owner
-  review/merge.
-- `main` is considered only after both real QA integrations exist, via new PRs
-  from the actual QA commits with `cherry-pick -x`, and requires approval by
-  ariel5253. Develop/QA approvals do not transfer. Nothing for `main` is
-  prepared or declared here.
+- Both actual QA integrations are complete. Main proposals are tracked in
+  [main-promotion.md](main-promotion.md), using cherry-pick -x from actual QA.
+- The owner alone merges. Main order: DB first, then API after confirmation of
+  its fixture provenance against the actual DB main integration.
+- Main requires current ariel5253 approval on the delivered head and the
+  existing review/conversation rules. Earlier approvals do not transfer.
 - Not claimed: a persistent QA deployment, and inspection of target-environment
   owners, default privileges or duplicate data (disposable tests do not show
   these).

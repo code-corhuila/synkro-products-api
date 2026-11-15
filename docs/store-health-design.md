@@ -161,6 +161,6 @@ remote CI approval. Products DB PR23 is now integrated into develop as
 migration/config blob matches that integration. SOURCE_COMMIT now points to
 the actual develop merge. Only provenance and this status changed, so no new
 test execution is claimed. [Integration evidence](evidence/db-develop-integration.json).
-The API is now integrated into develop; the current QA proposal status is in
-[qa-promotion.md](qa-promotion.md). Subsequent promotion and acceptance remain
-pending.
+Both Products deliveries are now integrated into QA; the current main proposal
+status is in [main-promotion.md](main-promotion.md). Main approval/integration and
+the remaining target acceptance stay pending.
