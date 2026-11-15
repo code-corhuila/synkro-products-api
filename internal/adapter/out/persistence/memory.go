@@ -16,11 +16,12 @@ import (
 // active-only category name rule, newest-first lists, and an Update that
 // never writes stock.
 type Memory struct {
-	mu         sync.Mutex
-	seq        int
-	products   map[string]memRow[model.Product]
-	categories map[string]memRow[model.Category]
-	keys       map[string]memKey
+	mu           sync.Mutex
+	priceHistory map[string][]model.PriceChange
+	seq          int
+	products     map[string]memRow[model.Product]
+	categories   map[string]memRow[model.Category]
+	keys         map[string]memKey
 
 	adjustments  map[string]model.StockAdjustment
 	reservations map[string]model.StockReservation
@@ -48,6 +49,7 @@ const (
 func NewMemory() *Memory {
 	return &Memory{
 		products:     map[string]memRow[model.Product]{},
+		priceHistory: map[string][]model.PriceChange{},
 		categories:   map[string]memRow[model.Category]{},
 		keys:         map[string]memKey{},
 		adjustments:  map[string]model.StockAdjustment{},

@@ -16,6 +16,7 @@ type fakeProducts struct {
 	byID    map[string]model.Product
 	keys    map[string]string
 	updates int
+	history []model.PriceChange
 	listed  out.ProductFilter
 	err     error // returned by every method when set
 }
@@ -182,4 +183,30 @@ func sequentialIDs(prefix string) func() string {
 		n++
 		return fmt.Sprintf("%s-%d", prefix, n)
 	}
+}
+
+func (f *fakeProducts) Apply(ctx context.Context, id string, decide out.ProductUpdateDecision) (model.Product, error) {
+	current, err := f.FindByID(ctx, id)
+	if err != nil {
+		return model.Product{}, err
+	}
+	next, h, err := decide(current)
+	if err != nil {
+		return model.Product{}, err
+	}
+	if next != current {
+		f.byID[id] = next
+		f.updates++
+	}
+	if h != nil {
+		h.Sequence = int64(len(f.history) + 1)
+		f.history = append(f.history, *h)
+	}
+	return next, nil
+}
+func (f *fakeProducts) ListByProduct(ctx context.Context, id string, page, limit int) ([]model.PriceChange, int, error) {
+	if _, err := f.FindByID(ctx, id); err != nil {
+		return nil, 0, err
+	}
+	return f.history, len(f.history), nil
 }
