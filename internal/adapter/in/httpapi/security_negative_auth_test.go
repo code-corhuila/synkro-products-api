@@ -52,7 +52,7 @@ func newNegativeAuthAPI(t *testing.T) *negativeAuthAPI {
 	}
 	router := NewRouter(
 		verifier,
-		usecase.NewProductService(mem.Products(), mem.Categories(), newID),
+		usecase.NewProductService(mem.Products(), mem.Categories(), newID, mem.ProductUpdates(), mem.PriceHistory(), time.Now),
 		usecase.NewCategoryService(mem.Categories(), newID),
 		usecase.NewStockService(counting, mem.StockReservations(), newID),
 		usecase.NewStockAlertService(mem.StockAlerts(), newID, time.Now),
